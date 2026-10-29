@@ -147,6 +147,17 @@ public class GuiController {
     }
 
     /**
+     * Quietly logs out the currently authenticated user without emitting a CLI log.
+     */
+    public void logoutQuiet() {
+        try {
+            model.logout();
+            notifyListeners();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
      * Exits the GUI application cleanly (REQ18).
      */
     public void quit() {

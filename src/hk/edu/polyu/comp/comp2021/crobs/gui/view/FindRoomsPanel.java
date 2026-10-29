@@ -16,6 +16,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -72,10 +73,10 @@ public class FindRoomsPanel extends JPanel {
     private final Runnable myBookingsNavCallback;
     private final Runnable manageRoomsNavCallback;
 
-    private JTextField dateField;
-    private JTextField startField;
-    private JTextField endField;
-    private JTextField capacityField;
+    private JComboBox<String> dateCombo;
+    private JComboBox<String> startCombo;
+    private JComboBox<String> endCombo;
+    private JComboBox<String> capacityCombo;
     private JButton equipDropdownBtn;
     private final Set<String> selectedFeatures = new LinkedHashSet<>();
     private final String[] allKnownEquipment = {
@@ -171,29 +172,58 @@ public class FindRoomsPanel extends JPanel {
         card.setLayout(new FlowLayout(FlowLayout.LEFT, 16, 17));
         card.setMaximumSize(new Dimension(Short.MAX_VALUE, 98));
 
-        // 1. Date
-        dateField = GuiTheme.createTextField(10);
-        dateField.setText("2026-11-03");
-        dateField.addActionListener(e -> executeSearch(true));
-        card.add(createFieldBox("Date", dateField));
+        // 1. Date (Convenient dropdown selector + editable)
+        String[] presetDates = {
+                "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09"
+        };
+        dateCombo = new JComboBox<>(presetDates);
+        dateCombo.setEditable(true);
+        dateCombo.setFont(GuiTheme.FONT_BODY);
+        dateCombo.setPreferredSize(new Dimension(130, 39));
+        dateCombo.addActionListener(e -> executeSearch(true));
+        card.add(createFieldBox("Date", dateCombo));
 
-        // 2. Start
-        startField = GuiTheme.createTextField(6);
-        startField.setText("14:00");
-        startField.addActionListener(e -> executeSearch(true));
-        card.add(createFieldBox("Start", startField));
+        // 2. Start (Convenient 30-min time slots)
+        String[] timeSlots = {
+                "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+                "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+                "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+                "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+                "20:00", "20:30", "21:00"
+        };
+        startCombo = new JComboBox<>(timeSlots);
+        startCombo.setSelectedItem("14:00");
+        startCombo.setEditable(true);
+        startCombo.setFont(GuiTheme.FONT_BODY);
+        startCombo.setPreferredSize(new Dimension(100, 39));
+        startCombo.addActionListener(e -> executeSearch(true));
+        card.add(createFieldBox("Start", startCombo));
 
-        // 3. End
-        endField = GuiTheme.createTextField(6);
-        endField.setText("15:00");
-        endField.addActionListener(e -> executeSearch(true));
-        card.add(createFieldBox("End", endField));
+        // 3. End (Convenient 30-min time slots)
+        String[] endSlots = {
+                "08:30", "09:00", "09:30", "10:00", "10:30",
+                "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+                "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+                "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+                "20:00", "20:30", "21:00", "21:30"
+        };
+        endCombo = new JComboBox<>(endSlots);
+        endCombo.setSelectedItem("15:00");
+        endCombo.setEditable(true);
+        endCombo.setFont(GuiTheme.FONT_BODY);
+        endCombo.setPreferredSize(new Dimension(100, 39));
+        endCombo.addActionListener(e -> executeSearch(true));
+        card.add(createFieldBox("End", endCombo));
 
-        // 4. People
-        capacityField = GuiTheme.createTextField(5);
-        capacityField.setText("10");
-        capacityField.addActionListener(e -> executeSearch(true));
-        card.add(createFieldBox("People", capacityField));
+        // 4. People (Capacity presets)
+        String[] capPresets = {"5", "10", "20", "30", "50", "100"};
+        capacityCombo = new JComboBox<>(capPresets);
+        capacityCombo.setSelectedItem("10");
+        capacityCombo.setEditable(true);
+        capacityCombo.setFont(GuiTheme.FONT_BODY);
+        capacityCombo.setPreferredSize(new Dimension(85, 39));
+        capacityCombo.addActionListener(e -> executeSearch(true));
+        card.add(createFieldBox("People", capacityCombo));
 
         // 5. Equipment Multi-Select (Preselect Wi-Fi matching CROBS_GUI_V3.html)
         selectedFeatures.add("wifi");
@@ -396,17 +426,30 @@ public class FindRoomsPanel extends JPanel {
         return wrap;
     }
 
+    private String getComboValue(JComboBox<String> cb, String def) {
+        if (cb == null) return def;
+        Object ed = cb.getEditor().getItem();
+        if (ed != null && !ed.toString().trim().isEmpty()) {
+            return ed.toString().trim();
+        }
+        Object sel = cb.getSelectedItem();
+        if (sel != null && !sel.toString().trim().isEmpty()) {
+            return sel.toString().trim();
+        }
+        return def;
+    }
+
     public void openBookingDrawer(Room room) {
         this.activeBookingRoom = room;
         MainFrame top = (MainFrame) SwingUtilities.getWindowAncestor(this);
         if (top != null) {
-            LocalDate d = LocalDate.now().plusDays(1);
+            LocalDate d = LocalDate.of(2026, 11, 3);
             LocalTime st = LocalTime.of(14, 0);
             LocalTime en = LocalTime.of(15, 0);
             try {
-                d = LocalDate.parse(dateField.getText().trim(), DATE_FMT);
-                st = LocalTime.parse(startField.getText().trim(), TIME_FMT);
-                en = LocalTime.parse(endField.getText().trim(), TIME_FMT);
+                d = LocalDate.parse(getComboValue(dateCombo, "2026-11-03"), DATE_FMT);
+                st = LocalTime.parse(getComboValue(startCombo, "14:00"), TIME_FMT);
+                en = LocalTime.parse(getComboValue(endCombo, "15:00"), TIME_FMT);
             } catch (Exception ignored) {
             }
             top.openBookFromSearch(room, d, st, en);
@@ -422,9 +465,9 @@ public class FindRoomsPanel extends JPanel {
     }
 
     private void onViewWeekClicked(Room room) {
-        LocalDate date = LocalDate.now();
+        LocalDate date = LocalDate.of(2026, 11, 3);
         try {
-            date = LocalDate.parse(dateField.getText().trim(), DATE_FMT);
+            date = LocalDate.parse(getComboValue(dateCombo, "2026-11-03"), DATE_FMT);
         } catch (Exception ignored) {
         }
         if (scheduleNavCallback != null) {
@@ -439,10 +482,10 @@ public class FindRoomsPanel extends JPanel {
         int capacity;
 
         try {
-            date = LocalDate.parse(dateField.getText().trim(), DATE_FMT);
-            start = LocalTime.parse(startField.getText().trim(), TIME_FMT);
-            end = LocalTime.parse(endField.getText().trim(), TIME_FMT);
-            capacity = Integer.parseInt(capacityField.getText().trim());
+            date = LocalDate.parse(getComboValue(dateCombo, "2026-11-03"), DATE_FMT);
+            start = LocalTime.parse(getComboValue(startCombo, "14:00"), TIME_FMT);
+            end = LocalTime.parse(getComboValue(endCombo, "15:00"), TIME_FMT);
+            capacity = Integer.parseInt(getComboValue(capacityCombo, "10"));
         } catch (Exception ex) {
             resultsTitleLabel.setText("Invalid search input");
             resultsSubtitleLabel.setText("Please check your date, time and capacity");

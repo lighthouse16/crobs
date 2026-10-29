@@ -2,6 +2,7 @@ package hk.edu.polyu.comp.comp2021.crobs.gui;
 
 import hk.edu.polyu.comp.comp2021.crobs.gui.dialog.LoginDialog;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.FindRoomsPanel;
+import hk.edu.polyu.comp.comp2021.crobs.gui.view.LoginPanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.ManagePanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.MyBookingsPanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.RoomSchedulePanel;
@@ -53,6 +54,7 @@ public class MainFrame extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
+    public static final String VIEW_LOGIN = "VIEW_LOGIN";
     public static final String VIEW_FIND = "VIEW_FIND";
     public static final String VIEW_MY_BOOKINGS = "VIEW_MY_BOOKINGS";
     public static final String VIEW_SCHEDULE = "VIEW_SCHEDULE";
@@ -72,12 +74,13 @@ public class MainFrame extends JFrame {
     private JLabel accountNameLabel;
     private JPanel accountBtn;
 
+    private LoginPanel loginPanel;
     private FindRoomsPanel findRoomsPanel;
     private MyBookingsPanel myBookingsPanel;
     private RoomSchedulePanel roomSchedulePanel;
     private ManagePanel managePanel;
 
-    private String currentViewKey = VIEW_FIND;
+    private String currentViewKey = VIEW_LOGIN;
 
     // Toast Notification Layer
     private JPanel toastPanel;
@@ -90,7 +93,11 @@ public class MainFrame extends JFrame {
 
         initComponents();
         controller.addListener(this::onSessionChanged);
-        updateNavigationState();
+        if (controller.isLoggedIn()) {
+            navigateTo(VIEW_FIND);
+        } else {
+            navigateTo(VIEW_LOGIN);
+        }
     }
 
     private void initComponents() {
@@ -121,6 +128,8 @@ public class MainFrame extends JFrame {
         cardsPanel = new JPanel(cardLayout);
         cardsPanel.setBackground(GuiTheme.COLOR_BG);
 
+        loginPanel = new LoginPanel(controller, () -> navigateTo(VIEW_FIND));
+
         findRoomsPanel = new FindRoomsPanel(
                 controller,
                 this::openScheduleView,
@@ -140,6 +149,7 @@ public class MainFrame extends JFrame {
 
         managePanel = new ManagePanel(controller);
 
+        cardsPanel.add(loginPanel, VIEW_LOGIN);
         cardsPanel.add(findRoomsPanel, VIEW_FIND);
         cardsPanel.add(myBookingsPanel, VIEW_MY_BOOKINGS);
         cardsPanel.add(roomSchedulePanel, VIEW_SCHEDULE);
@@ -369,6 +379,11 @@ public class MainFrame extends JFrame {
     }
 
     private void showAccountPopup() {
+        if (!controller.isLoggedIn()) {
+            navigateTo(VIEW_LOGIN);
+            return;
+        }
+
         JPopupMenu menu = new JPopupMenu();
         menu.setBackground(Color.WHITE);
         menu.setBorder(BorderFactory.createLineBorder(GuiTheme.COLOR_BORDER, 1));
@@ -377,24 +392,30 @@ public class MainFrame extends JFrame {
         JLabel headerLabel = new JLabel("Switch user · preview");
         headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
         headerLabel.setForeground(new Color(123, 131, 140));
-        headerLabel.setBorder(new EmptyBorder(8, 12, 6, 12));
+        headerLabel.setBorder(new EmptyBorder(8, 14, 6, 14));
+        headerLabel.setPreferredSize(new Dimension(236, 28));
         menu.add(headerLabel);
 
         // User list
         List<User> users = controller.getAllKnownUsers();
         for (User u : users) {
-            String html = "<html><table width='190' style='border:0; margin:0; padding:0;'>"
-                    + "<tr>"
-                    + "<td align='left' style='font-family:\"Segoe UI\"; font-size:12px; font-weight:bold; color:#20252c;'>"
-                    + u.getName().replace("_", " ") + "</td>"
-                    + "<td align='right' style='font-family:Consolas; font-size:11px; color:#9aa1aa;'>"
-                    + u.getId() + "</td>"
-                    + "</tr></table></html>";
-            JMenuItem userItem = new JMenuItem(html);
+            JMenuItem userItem = new JMenuItem();
+            userItem.setLayout(new BorderLayout(14, 0));
             userItem.setBackground(Color.WHITE);
+            userItem.setBorder(new EmptyBorder(7, 14, 7, 14));
             userItem.setPreferredSize(new Dimension(236, 34));
-            userItem.setBorder(new EmptyBorder(4, 10, 4, 10));
             userItem.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            JLabel nameLbl = new JLabel(u.getName().replace("_", " "));
+            nameLbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            nameLbl.setForeground(GuiTheme.COLOR_TEXT);
+
+            JLabel idLbl = new JLabel(u.getId());
+            idLbl.setFont(new Font("Consolas", Font.PLAIN, 11));
+            idLbl.setForeground(new Color(154, 161, 170));
+
+            userItem.add(nameLbl, BorderLayout.WEST);
+            userItem.add(idLbl, BorderLayout.EAST);
 
             userItem.addActionListener(e -> {
                 try {
@@ -409,30 +430,26 @@ public class MainFrame extends JFrame {
 
         menu.addSeparator();
 
-        JMenuItem signoutItem = new JMenuItem(controller.isLoggedIn() ? "Sign out" : "Sign in");
-        signoutItem.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        signoutItem.setForeground(controller.isLoggedIn() ? GuiTheme.COLOR_DANGER : GuiTheme.COLOR_BLUE);
+        JMenuItem signoutItem = new JMenuItem("Sign out");
+        signoutItem.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        signoutItem.setForeground(GuiTheme.COLOR_DANGER);
         signoutItem.setBackground(Color.WHITE);
+        signoutItem.setBorder(new EmptyBorder(7, 14, 7, 14));
         signoutItem.setPreferredSize(new Dimension(236, 34));
-        signoutItem.setBorder(new EmptyBorder(4, 10, 4, 10));
         signoutItem.setCursor(new Cursor(Cursor.HAND_CURSOR));
         signoutItem.addActionListener(e -> {
-            if (controller.isLoggedIn()) {
-                try {
-                    controller.logout();
-                    navigateTo(VIEW_FIND);
-                    showToast("Signed out");
-                } catch (CrobsException ignored) {
-                }
-            } else {
-                LoginDialog.showLogin(this, controller);
-                navigateTo(VIEW_FIND);
+            try {
+                controller.logout();
+                navigateTo(VIEW_LOGIN);
+                showToast("Signed out");
+            } catch (CrobsException ignored) {
             }
         });
         menu.add(signoutItem);
 
-        int xOffset = accountBtn.getWidth() - 236;
-        menu.show(accountBtn, xOffset, accountBtn.getHeight() + 8);
+        int width = menu.getPreferredSize().width;
+        int xOffset = accountBtn.getWidth() - width;
+        menu.show(accountBtn, xOffset, accountBtn.getHeight() + 4);
     }
 
     public void navigateTo(String viewKey) {
@@ -447,6 +464,8 @@ public class MainFrame extends JFrame {
             myBookingsPanel.refreshBookings(false);
         } else if (VIEW_MANAGE.equals(viewKey)) {
             managePanel.refreshData();
+        } else if (VIEW_LOGIN.equals(viewKey)) {
+            loginPanel.reset();
         }
     }
 
@@ -467,8 +486,10 @@ public class MainFrame extends JFrame {
         styleTab(navBookingsBtn, isBookings);
         styleTab(navManageBtn, isManage);
 
-        // Hide Manage tab if not admin
-        navManageBtn.setVisible(controller.isAdmin());
+        boolean loggedIn = controller.isLoggedIn();
+        navFindBtn.setEnabled(loggedIn);
+        navBookingsBtn.setEnabled(loggedIn);
+        navManageBtn.setVisible(loggedIn && controller.isAdmin());
 
         User current = controller.getCurrentUser();
         if (current != null) {

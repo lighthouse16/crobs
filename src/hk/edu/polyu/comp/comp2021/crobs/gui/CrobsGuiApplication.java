@@ -89,6 +89,9 @@ public class CrobsGuiApplication {
                 controller.bookQuiet("r3", dNov5, LocalTime.of(11, 0), LocalTime.of(12, 30), "Demonstration");
             }
         } catch (Exception ignored) {
+        } finally {
+            // Guarantee unauthenticated initial state on startup so app begins on Login screen
+            controller.logoutQuiet();
         }
     }
 }

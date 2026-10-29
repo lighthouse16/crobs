@@ -86,7 +86,30 @@ public class DrawerPanel extends JPanel {
     private User activeUser;
 
     // Shared Form Fields
+    private static final String[] PRESET_DATES = {
+            "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09"
+    };
+
+    private static final String[] PRESET_START_TIMES = {
+            "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+            "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+            "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+            "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+            "20:00", "20:30", "21:00"
+    };
+
+    private static final String[] PRESET_END_TIMES = {
+            "08:30", "09:00", "09:30", "10:00", "10:30",
+            "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+            "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+            "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+            "20:00", "20:30", "21:00", "21:30"
+    };
+
     private JComboBox<String> roomSelectCombo;
+    private JComboBox<String> dateCombo;
+    private JComboBox<String> startCombo;
+    private JComboBox<String> endCombo;
     private JTextField dateField;
     private JTextField startField;
     private JTextField endField;
@@ -218,6 +241,41 @@ public class DrawerPanel extends JPanel {
 
     // --- Mode Openers ---
 
+    private JComboBox<String> createSelectorCombo(String[] presets, String selectedValue) {
+        JComboBox<String> combo = new JComboBox<>(presets);
+        combo.setEditable(true);
+        combo.setFont(GuiTheme.FONT_BODY);
+        combo.setPreferredSize(new Dimension(0, 39));
+        if (selectedValue != null && !selectedValue.isEmpty()) {
+            boolean found = false;
+            for (String p : presets) {
+                if (p.equals(selectedValue)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                combo.insertItemAt(selectedValue, 0);
+            }
+            combo.setSelectedItem(selectedValue);
+        }
+        return combo;
+    }
+
+    private String getSelectedValue(JComboBox<String> combo, JTextField fallback) {
+        if (combo != null) {
+            Object ed = combo.getEditor().getItem();
+            if (ed != null && !ed.toString().trim().isEmpty()) {
+                return ed.toString().trim();
+            }
+            Object sel = combo.getSelectedItem();
+            if (sel != null && !sel.toString().trim().isEmpty()) {
+                return sel.toString().trim();
+            }
+        }
+        return (fallback != null) ? fallback.getText().trim() : "";
+    }
+
     public void openBookFromSearch(Room room, LocalDate date, LocalTime start, LocalTime end) {
         this.currentMode = Mode.BOOK_SEARCH;
         this.activeRoom = room;
@@ -243,6 +301,9 @@ public class DrawerPanel extends JPanel {
         dateField = new JTextField(date.format(DATE_FMT));
         startField = new JTextField(start.format(TIME_FMT));
         endField = new JTextField(end.format(TIME_FMT));
+        dateCombo = null;
+        startCombo = null;
+        endCombo = null;
 
         // Purpose Field
         purposeArea = new JTextArea(4, 20);
@@ -285,24 +346,21 @@ public class DrawerPanel extends JPanel {
         bodyContainer.add(summaryBox);
         bodyContainer.add(Box.createVerticalStrut(18));
 
-        // Date field
-        dateField = GuiTheme.createTextField(10);
-        dateField.setText(date.format(DATE_FMT));
-        bodyContainer.add(createFieldBox("Date", dateField));
+        // Date selector (convenient dropdown + editable)
+        dateCombo = createSelectorCombo(PRESET_DATES, date.format(DATE_FMT));
+        bodyContainer.add(createFieldBox("Date", dateCombo));
         bodyContainer.add(Box.createVerticalStrut(14));
 
-        // Row of two: Start & End
-        startField = GuiTheme.createTextField(6);
-        startField.setText(start.format(TIME_FMT));
-        endField = GuiTheme.createTextField(6);
-        endField.setText(end.format(TIME_FMT));
+        // Row of two: Start & End (convenient 30-min time slot dropdowns + editable)
+        startCombo = createSelectorCombo(PRESET_START_TIMES, start.format(TIME_FMT));
+        endCombo = createSelectorCombo(PRESET_END_TIMES, end.format(TIME_FMT));
 
         JPanel rowTwo = new JPanel(new GridLayout(1, 2, 12, 0));
         rowTwo.setOpaque(false);
         rowTwo.setAlignmentX(LEFT_ALIGNMENT);
         rowTwo.setMaximumSize(new Dimension(Short.MAX_VALUE, 65));
-        rowTwo.add(createFieldBox("Start", startField));
-        rowTwo.add(createFieldBox("End", endField));
+        rowTwo.add(createFieldBox("Start", startCombo));
+        rowTwo.add(createFieldBox("End", endCombo));
 
         bodyContainer.add(rowTwo);
         bodyContainer.add(Box.createVerticalStrut(14));
@@ -358,24 +416,21 @@ public class DrawerPanel extends JPanel {
         bodyContainer.add(createFieldBox("Room", roomSelectCombo));
         bodyContainer.add(Box.createVerticalStrut(14));
 
-        // Date field
-        dateField = GuiTheme.createTextField(10);
-        dateField.setText(booking.getDate().format(DATE_FMT));
-        bodyContainer.add(createFieldBox("Date", dateField));
+        // Date selector (convenient dropdown + editable)
+        dateCombo = createSelectorCombo(PRESET_DATES, booking.getDate().format(DATE_FMT));
+        bodyContainer.add(createFieldBox("Date", dateCombo));
         bodyContainer.add(Box.createVerticalStrut(14));
 
-        // Start & End fields
-        startField = GuiTheme.createTextField(6);
-        startField.setText(booking.getStartTime().format(TIME_FMT));
-        endField = GuiTheme.createTextField(6);
-        endField.setText(booking.getEndTime().format(TIME_FMT));
+        // Start & End (convenient 30-min time slot dropdowns + editable)
+        startCombo = createSelectorCombo(PRESET_START_TIMES, booking.getStartTime().format(TIME_FMT));
+        endCombo = createSelectorCombo(PRESET_END_TIMES, booking.getEndTime().format(TIME_FMT));
 
         JPanel rowTwo = new JPanel(new GridLayout(1, 2, 12, 0));
         rowTwo.setOpaque(false);
         rowTwo.setAlignmentX(LEFT_ALIGNMENT);
         rowTwo.setMaximumSize(new Dimension(Short.MAX_VALUE, 65));
-        rowTwo.add(createFieldBox("Start", startField));
-        rowTwo.add(createFieldBox("End", endField));
+        rowTwo.add(createFieldBox("Start", startCombo));
+        rowTwo.add(createFieldBox("End", endCombo));
 
         bodyContainer.add(rowTwo);
         bodyContainer.add(Box.createVerticalStrut(14));
@@ -544,9 +599,9 @@ public class DrawerPanel extends JPanel {
                 case BOOK_SEARCH:
                 case BOOK_WEEK: {
                     if (activeRoom == null) return;
-                    LocalDate d = LocalDate.parse(dateField.getText().trim(), DATE_FMT);
-                    LocalTime st = LocalTime.parse(startField.getText().trim(), TIME_FMT);
-                    LocalTime en = LocalTime.parse(endField.getText().trim(), TIME_FMT);
+                    LocalDate d = LocalDate.parse(getSelectedValue(dateCombo, dateField), DATE_FMT);
+                    LocalTime st = LocalTime.parse(getSelectedValue(startCombo, startField), TIME_FMT);
+                    LocalTime en = LocalTime.parse(getSelectedValue(endCombo, endField), TIME_FMT);
                     if (!st.isBefore(en)) {
                         errorLabel.setText("Start time must be before end time.");
                         return;
@@ -568,9 +623,9 @@ public class DrawerPanel extends JPanel {
                     if (sel < 0 || sel >= allRooms.size()) return;
                     String roomId = allRooms.get(sel).getId();
 
-                    LocalDate d = LocalDate.parse(dateField.getText().trim(), DATE_FMT);
-                    LocalTime st = LocalTime.parse(startField.getText().trim(), TIME_FMT);
-                    LocalTime en = LocalTime.parse(endField.getText().trim(), TIME_FMT);
+                    LocalDate d = LocalDate.parse(getSelectedValue(dateCombo, dateField), DATE_FMT);
+                    LocalTime st = LocalTime.parse(getSelectedValue(startCombo, startField), TIME_FMT);
+                    LocalTime en = LocalTime.parse(getSelectedValue(endCombo, endField), TIME_FMT);
                     if (!st.isBefore(en)) {
                         errorLabel.setText("Start time must be before end time.");
                         return;
