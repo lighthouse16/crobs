@@ -1,0 +1,28 @@
+# Compiled class files & build directories
+out/
+bin/
+build/
+target/
+*.class
+
+# Test execution logs & session outputs
+*.log
+gui_session.html
+gui_session.txt
+cli_session.html
+cli_session.txt
+*.tmp
+
+# IntelliJ IDEA user-specific files
+.idea/workspace.xml
+.idea/shelf/
+.idea/httpRequests/
+.idea/dataSources/
+.idea/dataSources.local.xml
+*.iws
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db

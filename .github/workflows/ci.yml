@@ -1,0 +1,39 @@
+name: CROBS CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        java: [ 17 ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+
+      - name: Build and Test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x build.sh test.sh
+          ./build.sh
+          ./test.sh
+
+      - name: Build and Test (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call build.bat
+          call test.bat
