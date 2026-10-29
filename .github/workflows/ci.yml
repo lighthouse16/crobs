@@ -10,6 +10,7 @@ jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         java: [ 17 ]
@@ -19,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
@@ -29,7 +30,8 @@ jobs:
         run: |
           chmod +x build.sh test.sh
           ./build.sh
-          ./test.sh
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run --auto-servernum ./test.sh
 
       - name: Build and Test (Windows)
         if: runner.os == 'Windows'
