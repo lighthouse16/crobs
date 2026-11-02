@@ -88,6 +88,7 @@ CROBS strictly follows the **Model-View-Controller (MVC)** pattern as mandated b
 | **REQ17** | `listBookings` | Logged-in | List all active reservations owned by current user | ✅ Done |
 | **REQ18** | `quit` | Anyone | Gracefully terminate program session | ✅ Done |
 | **BON1** | Desktop GUI Mode | All | Full-featured Swing UI with live matrix & session logging | ✅ Done |
+| **BON2** | `undo` / `redo` (Ctrl+Z / Ctrl+Y) | All | Command pattern undo/redo across all 9 mutating operations | ✅ Done |
 
 ---
 
@@ -102,6 +103,26 @@ CROBS includes a custom modern desktop GUI implementing a clean design language:
 - **Dual Session Logging Integration**: Seamlessly mirrors all GUI interactions into valid REQ1 HTML and TXT logs.
 
 ---
+
+## ↩️ Command Pattern Undo & Redo (BON2)
+
+CROBS implements the classic **Command Design Pattern** to provide reversible operations:
+
+- **Scope of Reversibility**: Covers all 9 state-mutating operations:
+  1. `addUser` (reverts by removing user; redo restores with same ID)
+  2. `removeUser` (reverts user and restores all cascade-cancelled bookings)
+  3. `changeRole` (reverts user role to previous permission level)
+  4. `addRoom` (reverts by removing room; redo restores with same ID and attributes)
+  5. `modifyRoom` (reverts field modifications for type, capacity, features)
+  6. `deleteRoom` (reverts room and restores all cascade-cancelled future bookings)
+  7. `book` (reverts by cancelling reservation; redo re-establishes slot)
+  8. `modifyBooking` (reverts timeslot, room, and purpose changes)
+  9. `deleteBooking` (restores previously cancelled reservation)
+- **Non-mutating Commands Excluded**: Session and query commands (`login`, `logout`, `search`, `schedule`, `listRoom`, `listAllRooms`, `listBookings`, `quit`) do not pollute undo history or invalidate redo branches.
+- **Dual-Stack Architecture**: Encapsulated in `UndoRedoManager` (`undoStack`, `redoStack`). Any new mutating operation automatically clears the redo stack.
+- **Dual Interface Integration**:
+  - **CLI**: `undo` and `redo` commands with canonical logging to both HTML and TXT.
+  - **GUI**: Dedicated topbar buttons, global keybindings (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`), instant view refresh, and toast feedback.
 
 ## 🚀 Quick Start
 
@@ -176,6 +197,7 @@ test.bat
 - **`CROBSTest`**: 100% coverage of domain model business logic, conflict detection, user privilege boundaries, cascading cancellations, and entity immutability.
 - **`CrobsGuiTest`**: Component lifecycle tests, drawer state transitions, schedule privacy masking, and session logger integration.
 - **`CrobsGuiEndToEndTest`**: Comprehensive 20-step end-to-end integration scenario validating real user workflows from superadmin bootstrap to room booking and session report generation.
+- **`UndoRedoTest`**: Exhaustive test suite for BON2 command pattern undo/redo across all 9 mutating operations, history clearing, cascade booking restoration, CLI integration, and GUI controller bindings.
 - **IntelliJ Code Inspection (`COMP2021_PROJECT.xml`)**: 0 errors against the official course code quality profile.
 
 ---
@@ -206,6 +228,10 @@ crobs/
 ├── src/
 │   └── hk/edu/polyu/comp/comp2021/crobs/
 │       ├── Application.java     # CLI Entry Point & Command Loop
+│       ├── command/             # Command Pattern Architecture (BON2)
+│       │   ├── CrobsCommand.java
+│       │   ├── UndoRedoManager.java
+│       │   └── ...              # 9 Concrete Command Classes
 │       ├── gui/                 # Desktop GUI Implementation (BON1)
 │       │   ├── CrobsGuiApplication.java
 │       │   ├── DrawerPanel.java
@@ -226,6 +252,8 @@ crobs/
 ├── test/
 │   ├── TestRunner.java          # Standalone CLI JUnit 5 reflection runner
 │   └── hk/edu/polyu/comp/comp2021/crobs/
+│       ├── command/
+│       │   └── UndoRedoTest.java # BON2 Command Pattern Test Suite
 │       ├── gui/
 │       │   ├── CrobsGuiEndToEndTest.java
 │       │   └── CrobsGuiTest.java
