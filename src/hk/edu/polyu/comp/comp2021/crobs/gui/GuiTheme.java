@@ -293,4 +293,82 @@ public final class GuiTheme {
         panel.setBorder(BorderFactory.createLineBorder(COLOR_BORDER, 1));
         return panel;
     }
+
+    /**
+     * Creates an abstract, modernist geometric campus floorplan logo mark.
+     * Pure geometric architecture (outer frame with 4 modular room quadrants),
+     * mathematically scaled to ensure 100% visual consistency without decorative fluff.
+     *
+     * @param size icon width and height in pixels.
+     * @return consistent JComponent brand mark.
+     */
+    public static JComponent createBrandLogo(int size) {
+        return new JComponent() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+                // Deep Slate Navy #26313d
+                g2.setColor(COLOR_BRAND);
+
+                // Outer structural perimeter: rounded squircle with crisp stroke
+                float strokeWidth = Math.max(1.8f, size * 0.08f);
+                g2.setStroke(new java.awt.BasicStroke(strokeWidth, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+
+                float pad = strokeWidth / 2f + 0.5f;
+                float frameSize = size - pad * 2f;
+                float radius = size * 0.24f;
+
+                java.awt.geom.RoundRectangle2D frame = new java.awt.geom.RoundRectangle2D.Float(
+                        pad, pad, frameSize, frameSize, radius, radius
+                );
+                g2.draw(frame);
+
+                // 4 inner modular room cells (2x2 architectural grid)
+                float innerPad = size * 0.22f;
+                float cellGap = Math.max(2.5f, size * 0.12f);
+                float cellW = (size - 2f * innerPad - cellGap) / 2f;
+                float cellCorner = Math.max(1.5f, size * 0.05f);
+
+                // Top-Left cell
+                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                        innerPad, innerPad, cellW, cellW, cellCorner, cellCorner
+                ));
+                // Top-Right cell
+                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                        innerPad + cellW + cellGap, innerPad, cellW, cellW, cellCorner, cellCorner
+                ));
+                // Bottom-Left cell
+                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                        innerPad, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
+                ));
+                // Bottom-Right cell
+                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                        innerPad + cellW + cellGap, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
+                ));
+
+                g2.dispose();
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(size, size);
+            }
+
+            @Override
+            public Dimension getMinimumSize() {
+                return new Dimension(size, size);
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(size, size);
+            }
+        };
+    }
 }

@@ -185,34 +185,21 @@ public class MainFrame extends JFrame {
         leftGroup.setLayout(new BoxLayout(leftGroup, BoxLayout.X_AXIS));
         leftGroup.setOpaque(false);
 
-        // Brand Icon (25x25 rounded box with 4 4x4 squares) + Name
+        // Brand Icon + Name (Consistent geometric campus mark)
         JPanel brandBox = new JPanel();
         brandBox.setLayout(new BoxLayout(brandBox, BoxLayout.X_AXIS));
         brandBox.setOpaque(false);
-
-        JPanel brandIcon = new JPanel() {
-            private static final long serialVersionUID = 1L;
+        brandBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        brandBox.addMouseListener(new MouseAdapter() {
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(GuiTheme.COLOR_BRAND);
-                // Outer 25x25 rect, border width 2, radius 6
-                g2.setStroke(new java.awt.BasicStroke(2f));
-                g2.drawRoundRect(1, 1, 23, 23, 6, 6);
-                // 4 squares (4x4) with 3px gap, 1px radius
-                g2.fillRoundRect(6, 6, 4, 4, 1, 1);
-                g2.fillRoundRect(13, 6, 4, 4, 1, 1);
-                g2.fillRoundRect(6, 13, 4, 4, 1, 1);
-                g2.fillRoundRect(13, 13, 4, 4, 1, 1);
-                g2.dispose();
+            public void mouseClicked(MouseEvent e) {
+                if (controller.isLoggedIn()) {
+                    navigateTo(VIEW_FIND);
+                }
             }
-        };
-        brandIcon.setPreferredSize(new Dimension(25, 25));
-        brandIcon.setMaximumSize(new Dimension(25, 25));
-        brandIcon.setMinimumSize(new Dimension(25, 25));
-        brandIcon.setOpaque(false);
+        });
+
+        JComponent brandIcon = GuiTheme.createBrandLogo(25);
 
         JLabel brandText = new JLabel("CROBS");
         brandText.setFont(new Font("Segoe UI", Font.BOLD, 17));

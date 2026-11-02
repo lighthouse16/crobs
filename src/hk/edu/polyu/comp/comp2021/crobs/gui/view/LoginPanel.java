@@ -9,6 +9,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -21,10 +22,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
-import java.awt.RenderingHints;
 import java.util.List;
 
 /**
@@ -64,27 +62,8 @@ public class LoginPanel extends JPanel {
         card.setPreferredSize(new Dimension(400, 390));
         card.setMaximumSize(new Dimension(400, 390));
 
-        // Brand Icon (28x28)
-        JPanel brandIcon = new JPanel() {
-            private static final long serialVersionUID = 1L;
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(GuiTheme.COLOR_BRAND);
-                g2.setStroke(new java.awt.BasicStroke(2f));
-                g2.drawRoundRect(1, 1, 26, 26, 7, 7);
-                g2.fillRoundRect(7, 7, 5, 5, 1, 1);
-                g2.fillRoundRect(16, 7, 5, 5, 1, 1);
-                g2.fillRoundRect(7, 16, 5, 5, 1, 1);
-                g2.fillRoundRect(16, 16, 5, 5, 1, 1);
-                g2.dispose();
-            }
-        };
-        brandIcon.setPreferredSize(new Dimension(28, 28));
-        brandIcon.setMaximumSize(new Dimension(28, 28));
-        brandIcon.setOpaque(false);
+        // Brand Icon (Consistent 30x30 geometric campus mark)
+        JComponent brandIcon = GuiTheme.createBrandLogo(30);
         brandIcon.setAlignmentX(LEFT_ALIGNMENT);
         card.add(brandIcon);
         card.add(Box.createVerticalStrut(14));
