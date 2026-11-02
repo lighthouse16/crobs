@@ -4,6 +4,8 @@ bin/
 build/
 target/
 *.class
+*.jar
+!lib/*.jar
 
 # Test execution logs & session outputs
 *.log
