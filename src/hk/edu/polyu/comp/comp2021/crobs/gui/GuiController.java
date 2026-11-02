@@ -246,12 +246,12 @@ public class GuiController {
     }
 
     /**
-     * Returns all known users tracked in the session.
+     * Returns all registered users from the model.
      *
      * @return list of User objects.
      */
     public List<User> getAllKnownUsers() {
-        return new ArrayList<>(knownUsers.values());
+        return model.listAllUsers();
     }
 
     // ==========================================
@@ -542,5 +542,53 @@ public class GuiController {
         Booking b = model.book(roomId.trim(), date, start, end, cleanP);
         notifyListeners();
         return b;
+    }
+
+    // ==========================================
+    // Undo / Redo Operations (BON2)
+    // ==========================================
+
+    /**
+     * Undoes the last mutating operation (BON2).
+     *
+     * @return true if an operation was undone, false otherwise.
+     * @throws CrobsException if undo fails.
+     */
+    public boolean undo() throws CrobsException {
+        logger.logCommand("undo");
+        boolean result = model.undo();
+        notifyListeners();
+        return result;
+    }
+
+    /**
+     * Redoes the last undone operation (BON2).
+     *
+     * @return true if an operation was redone, false otherwise.
+     * @throws CrobsException if redo fails.
+     */
+    public boolean redo() throws CrobsException {
+        logger.logCommand("redo");
+        boolean result = model.redo();
+        notifyListeners();
+        return result;
+    }
+
+    /**
+     * Checks if an undo operation is available.
+     *
+     * @return true if undo is available.
+     */
+    public boolean canUndo() {
+        return model.canUndo();
+    }
+
+    /**
+     * Checks if a redo operation is available.
+     *
+     * @return true if redo is available.
+     */
+    public boolean canRedo() {
+        return model.canRedo();
     }
 }

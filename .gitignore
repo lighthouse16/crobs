@@ -14,11 +14,7 @@ cli_session.txt
 *.tmp
 
 # IntelliJ IDEA user-specific files
-.idea/workspace.xml
-.idea/shelf/
-.idea/httpRequests/
-.idea/dataSources/
-.idea/dataSources.local.xml
+.idea/
 *.iws
 
 # OS-specific files

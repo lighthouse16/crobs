@@ -1,5 +1,7 @@
 package hk.edu.polyu.comp.comp2021.crobs.model;
 
+import hk.edu.polyu.comp.comp2021.crobs.command.*;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -7,13 +9,15 @@ import java.util.*;
 /**
  * The core engine and Facade of the Campus Room Booking System (CROBS).
  * Manages in-memory data for users, rooms, and bookings.
- * Follows the MVC Model layer architecture.
+ * Follows the MVC Model layer architecture and supports undo/redo via Command Pattern (BON2).
  */
 public class CROBS {
 
     private final Map<String, User> users = new HashMap<>();
     private final Map<String, Room> rooms = new HashMap<>();
     private final Map<String, Booking> bookings = new HashMap<>();
+
+    private final UndoRedoManager undoRedoManager = new UndoRedoManager();
 
     private User currentUser = null;
 
@@ -120,6 +124,7 @@ public class CROBS {
         String newId = generateUserId();
         User newUser = new User(newId, name.trim(), UserRole.REGULAR);
         users.put(newUser.getId().toLowerCase(), newUser);
+        undoRedoManager.recordExecutedCommand(new AddUserCommand(this, newUser));
         return newUser;
     }
 
@@ -150,8 +155,9 @@ public class CROBS {
             }
         }
         for (Booking b : userBookings) {
-            bookings.remove(b.getId());
+            bookings.remove(b.getId().toLowerCase());
         }
+        undoRedoManager.recordExecutedCommand(new RemoveUserCommand(this, target, userBookings));
     }
 
     /**
@@ -173,8 +179,20 @@ public class CROBS {
             throw new CrobsException("User not found: " + targetUserId);
         }
 
-        // Update target user's role
+        UserRole oldRole = target.getRole();
         target.setRole(newRole);
+        undoRedoManager.recordExecutedCommand(new ChangeRoleCommand(this, targetUserId, oldRole, newRole));
+    }
+
+    /**
+     * Lists all users in ascending order of user ID.
+     *
+     * @return sorted list of all registered users.
+     */
+    public List<User> listAllUsers() {
+        List<User> userList = new ArrayList<>(users.values());
+        userList.sort(Comparator.comparing(User::getId));
+        return Collections.unmodifiableList(userList);
     }
 
     // ==========================================
@@ -197,6 +215,7 @@ public class CROBS {
         String roomId = generateRoomId();
         Room room = new Room(roomId, roomType, capacity, features);
         rooms.put(room.getId().toLowerCase(), room);
+        undoRedoManager.recordExecutedCommand(new AddRoomCommand(this, room));
         return room;
     }
 
@@ -212,15 +231,16 @@ public class CROBS {
         checkAdminAccess();
         Room room = getRoomOrThrow(roomId);
 
+        String oldValue;
         if ("type".equalsIgnoreCase(field)) {
+            oldValue = room.getType().name();
             RoomType newType = RoomType.fromString(newValue);
             if (newType == null) {
                 throw new CrobsException("Invalid room type: " + newValue);
             }
             room.setType(newType);
-            return;
-        }
-        if ("capacity".equalsIgnoreCase(field)) {
+        } else if ("capacity".equalsIgnoreCase(field)) {
+            oldValue = String.valueOf(room.getCapacity());
             int newCap;
             try {
                 newCap = Integer.parseInt(newValue);
@@ -231,9 +251,8 @@ public class CROBS {
                 throw new CrobsException("Capacity must be greater than 0");
             }
             room.setCapacity(newCap);
-            return;
-        }
-        if ("features".equalsIgnoreCase(field)) {
+        } else if ("features".equalsIgnoreCase(field)) {
+            oldValue = String.join(",", room.getFeatures());
             String[] tokens = newValue.trim().split(",");
             Set<String> set = new HashSet<>();
             for (String feature : tokens) {
@@ -242,9 +261,11 @@ public class CROBS {
                 }
             }
             room.setFeatures(set);
-            return;
+        } else {
+            throw new CrobsException("Invalid field: " + field);
         }
-        throw new CrobsException("Invalid field: " + field);
+
+        undoRedoManager.recordExecutedCommand(new ModifyRoomCommand(this, room.getId(), field, oldValue, newValue));
     }
 
     /**
@@ -257,7 +278,7 @@ public class CROBS {
         checkAdminAccess();
         Room room = getRoomOrThrow(roomId);
 
-        rooms.remove(room.getId());
+        rooms.remove(room.getId().toLowerCase());
         List<Booking> futureBookings = new ArrayList<>();
         for (Booking b : bookings.values()) {
             if (b.getRoomId().equalsIgnoreCase(room.getId()) && !b.getDate().isBefore(LocalDate.now())) {
@@ -265,8 +286,9 @@ public class CROBS {
             }
         }
         for (Booking b : futureBookings) {
-            bookings.remove(b.getId());
+            bookings.remove(b.getId().toLowerCase());
         }
+        undoRedoManager.recordExecutedCommand(new DeleteRoomCommand(this, room, futureBookings));
     }
 
     /**
@@ -318,7 +340,8 @@ public class CROBS {
             }
         }
         Booking newBooking = new Booking(generateBookingId(), roomId, currentUser.getId(), date, startTime, endTime, purpose);
-        bookings.put(newBooking.getId(), newBooking);
+        bookings.put(newBooking.getId().toLowerCase(), newBooking);
+        undoRedoManager.recordExecutedCommand(new BookCommand(this, newBooking));
         return newBooking;
     }
 
@@ -348,10 +371,22 @@ public class CROBS {
                 throw new CrobsException("Time conflict with existing booking.");
             }
         }
+
+        String oldRoomId = booking.getRoomId();
+        LocalDate oldDate = booking.getDate();
+        LocalTime oldStartTime = booking.getStartTime();
+        LocalTime oldEndTime = booking.getEndTime();
+        String oldPurpose = booking.getPurpose();
+
         booking.setRoomId(roomId);
         booking.setDate(date);
         booking.setTimeInterval(startTime, endTime);
         booking.setPurpose(purpose);
+
+        undoRedoManager.recordExecutedCommand(new ModifyBookingCommand(
+                this, bookingId,
+                oldRoomId, oldDate, oldStartTime, oldEndTime, oldPurpose,
+                roomId, date, startTime, endTime, purpose));
     }
 
     /**
@@ -366,7 +401,8 @@ public class CROBS {
         if (!booking.getUserId().equalsIgnoreCase(currentUser.getId())) {
             throw new CrobsException("Permission denied: You can only delete your own bookings.");
         }
-        bookings.remove(booking.getId());
+        bookings.remove(booking.getId().toLowerCase());
+        undoRedoManager.recordExecutedCommand(new DeleteBookingCommand(this, booking));
     }
 
     /**
@@ -466,6 +502,15 @@ public class CROBS {
         }
     }
 
+    private User getUserOrThrow(String userId) throws CrobsException {
+        if (userId == null) throw new IllegalArgumentException("User ID cannot be null");
+        User u = users.get(userId.trim().toLowerCase());
+        if (u == null) {
+            throw new CrobsException("User not found: " + userId);
+        }
+        return u;
+    }
+
     private Room getRoomOrThrow(String roomId) throws CrobsException {
         if (roomId == null) throw new IllegalArgumentException("Room ID cannot be null");
         Room room = rooms.get(roomId.trim().toLowerCase());
@@ -482,5 +527,203 @@ public class CROBS {
             throw new CrobsException("Booking not found: " + bookingId);
         }
         return booking;
+    }
+
+    // ==========================================
+    // Undo / Redo Restoration & Direct Execution (BON2)
+    // ==========================================
+
+    /**
+     * Restores a previously removed user and any associated bookings (BON2).
+     *
+     * @param user               user to restore.
+     * @param associatedBookings list of bookings to restore.
+     */
+    public void restoreUser(User user, List<Booking> associatedBookings) {
+        if (user != null) {
+            users.put(user.getId().toLowerCase(), user);
+            if (associatedBookings != null) {
+                for (Booking b : associatedBookings) {
+                    bookings.put(b.getId().toLowerCase(), b);
+                }
+            }
+        }
+    }
+
+    /**
+     * Directly removes a user by ID without recording in undo/redo history (BON2).
+     *
+     * @param userId user ID to remove.
+     */
+    public void removeUserDirect(String userId) {
+        if (userId != null) {
+            users.remove(userId.toLowerCase());
+        }
+    }
+
+    /**
+     * Directly changes a user's role without recording in undo/redo history (BON2).
+     *
+     * @param userId  target user ID.
+     * @param newRole target role.
+     * @throws CrobsException if user not found.
+     */
+    public void changeRoleDirect(String userId, UserRole newRole) throws CrobsException {
+        User u = getUserOrThrow(userId);
+        u.setRole(newRole);
+    }
+
+    /**
+     * Restores a previously deleted room and any associated bookings (BON2).
+     *
+     * @param room               room to restore.
+     * @param associatedBookings bookings to restore.
+     */
+    public void restoreRoom(Room room, List<Booking> associatedBookings) {
+        if (room != null) {
+            rooms.put(room.getId().toLowerCase(), room);
+            if (associatedBookings != null) {
+                for (Booking b : associatedBookings) {
+                    bookings.put(b.getId().toLowerCase(), b);
+                }
+            }
+        }
+    }
+
+    /**
+     * Directly removes a room by ID without recording in undo/redo history (BON2).
+     *
+     * @param roomId room ID to remove.
+     */
+    public void removeRoomDirect(String roomId) {
+        if (roomId != null) {
+            rooms.remove(roomId.toLowerCase());
+        }
+    }
+
+    /**
+     * Directly modifies a room field without recording in undo/redo history (BON2).
+     *
+     * @param roomId room ID.
+     * @param field  field name.
+     * @param value  new field value.
+     * @throws CrobsException if room not found or invalid format.
+     */
+    public void modifyRoomDirect(String roomId, String field, String value) throws CrobsException {
+        Room room = getRoomOrThrow(roomId);
+        if ("type".equalsIgnoreCase(field)) {
+            RoomType type = RoomType.fromString(value);
+            if (type == null) {
+                throw new CrobsException("Invalid room type: " + value);
+            }
+            room.setType(type);
+        } else if ("capacity".equalsIgnoreCase(field)) {
+            try {
+                room.setCapacity(Integer.parseInt(value));
+            } catch (NumberFormatException e) {
+                throw new CrobsException("Invalid capacity: " + value);
+            }
+        } else if ("features".equalsIgnoreCase(field)) {
+            Set<String> set = new HashSet<>();
+            if (value != null && !value.trim().isEmpty()) {
+                for (String f : value.split(",")) {
+                    if (!f.trim().isEmpty()) {
+                        set.add(f.trim());
+                    }
+                }
+            }
+            room.setFeatures(set);
+        } else {
+            throw new CrobsException("Invalid field: " + field);
+        }
+    }
+
+    /**
+     * Restores a previously deleted booking (BON2).
+     *
+     * @param booking booking instance to restore.
+     */
+    public void restoreBooking(Booking booking) {
+        if (booking != null) {
+            bookings.put(booking.getId().toLowerCase(), booking);
+        }
+    }
+
+    /**
+     * Directly removes a booking by ID without recording in undo/redo history (BON2).
+     *
+     * @param bookingId booking ID.
+     */
+    public void deleteBookingDirect(String bookingId) {
+        if (bookingId != null) {
+            bookings.remove(bookingId.toLowerCase());
+        }
+    }
+
+    /**
+     * Directly updates a booking's properties without recording in undo/redo history (BON2).
+     *
+     * @param bookingId booking ID.
+     * @param roomId    target room ID.
+     * @param date      date.
+     * @param startTime start time.
+     * @param endTime   end time.
+     * @param purpose   purpose.
+     * @throws CrobsException if booking not found.
+     */
+    public void modifyBookingDirect(String bookingId, String roomId, LocalDate date,
+                                    LocalTime startTime, LocalTime endTime, String purpose) throws CrobsException {
+        Booking booking = getBookingOrThrow(bookingId);
+        booking.setRoomId(roomId);
+        booking.setDate(date);
+        booking.setTimeInterval(startTime, endTime);
+        booking.setPurpose(purpose);
+    }
+
+    /**
+     * Undoes the most recent mutating operation (BON2).
+     *
+     * @return true if an operation was undone, false if stack was empty.
+     * @throws CrobsException if undo fails.
+     */
+    public boolean undo() throws CrobsException {
+        return undoRedoManager.undo();
+    }
+
+    /**
+     * Redoes the most recently undone operation (BON2).
+     *
+     * @return true if an operation was redone, false if stack was empty.
+     * @throws CrobsException if redo fails.
+     */
+    public boolean redo() throws CrobsException {
+        return undoRedoManager.redo();
+    }
+
+    /**
+     * Checks if undo is available.
+     *
+     * @return true if undo stack is not empty.
+     */
+    public boolean canUndo() {
+        return undoRedoManager.canUndo();
+    }
+
+    /**
+     * Checks if redo is available.
+     *
+     * @return true if redo stack is not empty.
+     */
+    public boolean canRedo() {
+        return undoRedoManager.canRedo();
+    }
+
+    /**
+     * Returns the UndoRedoManager instance.
+     *
+     * @return UndoRedoManager.
+     */
+    public UndoRedoManager getUndoRedoManager() {
+        return undoRedoManager;
     }
 }

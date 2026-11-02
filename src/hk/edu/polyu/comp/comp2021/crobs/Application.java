@@ -257,6 +257,22 @@ public class Application {
                 }
                 break;
 
+            case "undo": // [BON2]
+                if (crobs.undo()) {
+                    System.out.println("Undo successful.");
+                } else {
+                    System.out.println("Nothing to undo.");
+                }
+                break;
+
+            case "redo": // [BON2]
+                if (crobs.redo()) {
+                    System.out.println("Redo successful.");
+                } else {
+                    System.out.println("Nothing to redo.");
+                }
+                break;
+
             default:
                 System.out.println("Unknown command: " + command);
         }
@@ -288,6 +304,10 @@ public class Application {
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Invalid time format (expected HH:MM): " + str);
         }
+    }
+
+    public CROBS getCrobs() {
+        return crobs;
     }
 
     /**

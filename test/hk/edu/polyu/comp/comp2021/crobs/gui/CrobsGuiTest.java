@@ -287,4 +287,27 @@ public class CrobsGuiTest {
         mainFrame.navigateTo(MainFrame.VIEW_FIND);
         mainFrame.dispose();
     }
+
+    @Test
+    void testMainFrameUndoRedo() throws CrobsException {
+        controller.loginQuiet("u1");
+        MainFrame mainFrame = new MainFrame(controller);
+        assertNotNull(mainFrame);
+
+        // Perform mutating action
+        controller.addUserQuiet("BobUndo");
+        assertTrue(controller.canUndo());
+
+        // Perform Undo via MainFrame
+        mainFrame.performUndo();
+        assertFalse(controller.canUndo());
+        assertTrue(controller.canRedo());
+
+        // Perform Redo via MainFrame
+        mainFrame.performRedo();
+        assertTrue(controller.canUndo());
+        assertFalse(controller.canRedo());
+
+        mainFrame.dispose();
+    }
 }

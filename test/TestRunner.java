@@ -17,7 +17,8 @@ public class TestRunner {
         Class<?>[] testClasses = new Class<?>[] {
             Class.forName("hk.edu.polyu.comp.comp2021.crobs.model.CROBSTest"),
             Class.forName("hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiTest"),
-            Class.forName("hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiEndToEndTest")
+            Class.forName("hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiEndToEndTest"),
+            Class.forName("hk.edu.polyu.comp.comp2021.crobs.command.UndoRedoTest")
         };
 
         int passed = 0;

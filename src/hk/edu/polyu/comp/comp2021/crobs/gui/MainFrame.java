@@ -11,6 +11,7 @@ import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
 import hk.edu.polyu.comp.comp2021.crobs.model.Room;
 import hk.edu.polyu.comp.comp2021.crobs.model.User;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -21,6 +22,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.KeyStroke;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import javax.swing.border.Border;
@@ -36,6 +38,10 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -69,6 +75,9 @@ public class MainFrame extends JFrame {
     private JButton navFindBtn;
     private JButton navBookingsBtn;
     private JButton navManageBtn;
+
+    private JButton undoBtn;
+    private JButton redoBtn;
 
     private JLabel avatarCircle;
     private JLabel accountNameLabel;
@@ -170,6 +179,33 @@ public class MainFrame extends JFrame {
         contentWithToast.add(toastPanel, BorderLayout.SOUTH);
 
         add(contentWithToast, BorderLayout.CENTER);
+
+        // Keyboard Shortcuts for Undo (Ctrl+Z) and Redo (Ctrl+Y, Ctrl+Shift+Z)
+        int menuMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_Z, menuMask), "undoAction"
+        );
+        getRootPane().getActionMap().put("undoAction", new AbstractAction() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                performUndo();
+            }
+        });
+
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_Y, menuMask), "redoAction"
+        );
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_Z, menuMask | InputEvent.SHIFT_DOWN_MASK), "redoAction"
+        );
+        getRootPane().getActionMap().put("redoAction", new AbstractAction() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                performRedo();
+            }
+        });
     }
 
     private JPanel createTopNavBar() {
@@ -297,6 +333,14 @@ public class MainFrame extends JFrame {
         avatarCircle.addMouseListener(accountAdapter);
         accountNameLabel.addMouseListener(accountAdapter);
         downArrow.addMouseListener(accountAdapter);
+
+        // Undo / Redo Buttons (BON2)
+        undoBtn = createHeaderActionBtn("Undo", "Undo last operation (Ctrl+Z)", this::performUndo);
+        redoBtn = createHeaderActionBtn("Redo", "Redo last undone operation (Ctrl+Y)", this::performRedo);
+        rightGroup.add(undoBtn);
+        rightGroup.add(Box.createHorizontalStrut(8));
+        rightGroup.add(redoBtn);
+        rightGroup.add(Box.createHorizontalStrut(18));
 
         rightGroup.add(accountBtn);
         bar.add(rightGroup, BorderLayout.EAST);
@@ -487,6 +531,7 @@ public class MainFrame extends JFrame {
             avatarCircle.setText("–");
             accountNameLabel.setText("Sign in");
         }
+        updateUndoRedoButtons();
     }
 
     private void styleTab(JButton tab, boolean active) {
@@ -499,6 +544,97 @@ public class MainFrame extends JFrame {
 
     private void onSessionChanged() {
         updateNavigationState();
+        updateUndoRedoButtons();
+    }
+
+    // ==========================================
+    // Undo / Redo Actions & UI State (BON2)
+    // ==========================================
+
+    /**
+     * Executes an undo operation and updates the active view.
+     */
+    public void performUndo() {
+        try {
+            if (controller.canUndo()) {
+                boolean ok = controller.undo();
+                if (ok) {
+                    showToast("Undone last operation.");
+                    refreshCurrentView();
+                } else {
+                    showToast("Nothing to undo.");
+                }
+            } else {
+                showToast("Nothing to undo.");
+            }
+        } catch (CrobsException ex) {
+            showToast("Undo error: " + ex.getMessage());
+        }
+        updateUndoRedoButtons();
+    }
+
+    /**
+     * Executes a redo operation and updates the active view.
+     */
+    public void performRedo() {
+        try {
+            if (controller.canRedo()) {
+                boolean ok = controller.redo();
+                if (ok) {
+                    showToast("Redone last operation.");
+                    refreshCurrentView();
+                } else {
+                    showToast("Nothing to redo.");
+                }
+            } else {
+                showToast("Nothing to redo.");
+            }
+        } catch (CrobsException ex) {
+            showToast("Redo error: " + ex.getMessage());
+        }
+        updateUndoRedoButtons();
+    }
+
+    /**
+     * Refreshes the currently active view content.
+     */
+    public void refreshCurrentView() {
+        if (VIEW_FIND.equals(currentViewKey)) {
+            findRoomsPanel.executeSearch(false);
+        } else if (VIEW_MY_BOOKINGS.equals(currentViewKey)) {
+            myBookingsPanel.refreshBookings(false);
+        } else if (VIEW_MANAGE.equals(currentViewKey)) {
+            managePanel.refreshData();
+        }
+    }
+
+    private void updateUndoRedoButtons() {
+        if (undoBtn != null) {
+            boolean canUndo = controller.canUndo();
+            undoBtn.setEnabled(canUndo);
+            undoBtn.setForeground(canUndo ? new Color(60, 70, 80) : new Color(175, 182, 190));
+        }
+        if (redoBtn != null) {
+            boolean canRedo = controller.canRedo();
+            redoBtn.setEnabled(canRedo);
+            redoBtn.setForeground(canRedo ? new Color(60, 70, 80) : new Color(175, 182, 190));
+        }
+    }
+
+    private JButton createHeaderActionBtn(String text, String tooltip, Runnable action) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setForeground(new Color(90, 100, 112));
+        btn.setBackground(Color.WHITE);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(GuiTheme.COLOR_BORDER, 1),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)
+        ));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setToolTipText(tooltip);
+        btn.addActionListener(e -> action.run());
+        return btn;
     }
 
     // --- Public Drawer Openers ---
