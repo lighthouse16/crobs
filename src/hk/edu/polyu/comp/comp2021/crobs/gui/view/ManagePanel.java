@@ -203,53 +203,15 @@ public class ManagePanel extends JPanel {
         roomsTable.getColumnModel().getColumn(3).setPreferredWidth(340); // Equipment
         roomsTable.getColumnModel().getColumn(4).setPreferredWidth(180); // Actions
 
-        roomsTable.getColumnModel().getColumn(0).setCellRenderer(new BoldCellRenderer());
+        roomsTable.getColumnModel().getColumn(0).setCellRenderer(new RoomIdRenderer());
         roomsTable.getColumnModel().getColumn(1).setCellRenderer(new RoomTypeCellRenderer());
-        roomsTable.getColumnModel().getColumn(2).setCellRenderer(new PlainCellRenderer());
-        roomsTable.getColumnModel().getColumn(3).setCellRenderer(new PlainCellRenderer());
+        roomsTable.getColumnModel().getColumn(2).setCellRenderer(new RoomDataRenderer());
+        roomsTable.getColumnModel().getColumn(3).setCellRenderer(new RoomDataRenderer());
         roomsTable.getColumnModel().getColumn(4).setCellRenderer(new RoomActionsCellRenderer());
 
         // Instant single-click action listener on column 4
-        roomsTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int row = roomsTable.rowAtPoint(e.getPoint());
-                int col = roomsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < roomsList.size()) {
-                    java.awt.Rectangle rect = roomsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    Room r = roomsList.get(row);
-                    // Delete button: rightX - 84 to rightX - 16
-                    if (clickX >= rightX - 84 && clickX <= rightX - 16) {
-                        onDeleteRoom(r);
-                    } else if (clickX >= rightX - 144 && clickX <= rightX - 90) {
-                        // Edit button: rightX - 144 to rightX - 90
-                        onEditRoom(r);
-                    }
-                }
-            }
-        });
-
-        roomsTable.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                int row = roomsTable.rowAtPoint(e.getPoint());
-                int col = roomsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < roomsList.size()) {
-                    java.awt.Rectangle rect = roomsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    boolean overDel = (clickX >= rightX - 84 && clickX <= rightX - 16);
-                    boolean overEdit = (clickX >= rightX - 144 && clickX <= rightX - 90);
-                    if (overDel || overEdit) {
-                        roomsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        return;
-                    }
-                }
-                roomsTable.setCursor(Cursor.getDefaultCursor());
-            }
-        });
+        roomsTable.addMouseListener(new RoomsTableClickListener());
+        roomsTable.addMouseMotionListener(new RoomsTableMotionListener());
 
         JScrollPane scroll = new JScrollPane(roomsTable);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -296,69 +258,14 @@ public class ManagePanel extends JPanel {
         usersTable.getColumnModel().getColumn(2).setPreferredWidth(180); // Role
         usersTable.getColumnModel().getColumn(3).setPreferredWidth(220); // Actions
 
-        usersTable.getColumnModel().getColumn(0).setCellRenderer(new BoldCellRenderer());
-        usersTable.getColumnModel().getColumn(1).setCellRenderer(new PlainCellRenderer());
-        usersTable.getColumnModel().getColumn(2).setCellRenderer(new PlainCellRenderer());
+        usersTable.getColumnModel().getColumn(0).setCellRenderer(new UserIdRenderer());
+        usersTable.getColumnModel().getColumn(1).setCellRenderer(new UserDataRenderer());
+        usersTable.getColumnModel().getColumn(2).setCellRenderer(new UserDataRenderer());
         usersTable.getColumnModel().getColumn(3).setCellRenderer(new UserActionsCellRenderer());
 
         // Instant single-click action listener on column 3
-        usersTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int row = usersTable.rowAtPoint(e.getPoint());
-                int col = usersTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 3 && row < usersList.size()) {
-                    java.awt.Rectangle rect = usersTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    User u = usersList.get(row);
-                    boolean hasRole = controller.isSuperadmin() && !u.getId().equalsIgnoreCase("u1");
-                    boolean hasRemove = (u.getRole() == UserRole.REGULAR);
-
-                    if (hasRole && hasRemove) {
-                        if (clickX >= rightX - 88 && clickX <= rightX - 16) {
-                            onRemoveUser(u);
-                        } else if (clickX >= rightX - 194 && clickX <= rightX - 94) {
-                            onChangeRole(u);
-                        }
-                    } else if (hasRole) {
-                        if (clickX >= rightX - 116 && clickX <= rightX - 16) {
-                            onChangeRole(u);
-                        }
-                    } else if (hasRemove) {
-                        if (clickX >= rightX - 88 && clickX <= rightX - 16) {
-                            onRemoveUser(u);
-                        }
-                    }
-                }
-            }
-        });
-
-        usersTable.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                int row = usersTable.rowAtPoint(e.getPoint());
-                int col = usersTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 3 && row < usersList.size()) {
-                    java.awt.Rectangle rect = usersTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    User u = usersList.get(row);
-                    boolean hasRole = controller.isSuperadmin() && !u.getId().equalsIgnoreCase("u1");
-                    boolean hasRemove = (u.getRole() == UserRole.REGULAR);
-
-                    boolean overRem = hasRemove && (clickX >= rightX - 88 && clickX <= rightX - 16);
-                    boolean overRole = (hasRole && hasRemove && (clickX >= rightX - 194 && clickX <= rightX - 94))
-                            || (hasRole && !hasRemove && (clickX >= rightX - 116 && clickX <= rightX - 16));
-
-                    if (overRem || overRole) {
-                        usersTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        return;
-                    }
-                }
-                usersTable.setCursor(Cursor.getDefaultCursor());
-            }
-        });
+        usersTable.addMouseListener(new UsersTableClickListener());
+        usersTable.addMouseMotionListener(new UsersTableMotionListener());
 
         JScrollPane scroll = new JScrollPane(usersTable);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -553,7 +460,7 @@ public class ManagePanel extends JPanel {
         }
     }
 
-    private static class BoldCellRenderer extends DefaultTableCellRenderer {
+    private static class RoomIdRenderer extends DefaultTableCellRenderer {
         private static final long serialVersionUID = 1L;
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
@@ -564,7 +471,21 @@ public class ManagePanel extends JPanel {
             l.setBorder(new EmptyBorder(0, 22, 0, 10));
             if (value instanceof Room) {
                 l.setText(((Room) value).getId());
-            } else if (value instanceof User) {
+            }
+            return l;
+        }
+    }
+
+    private static class UserIdRenderer extends DefaultTableCellRenderer {
+        private static final long serialVersionUID = 1L;
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int col) {
+            JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+            l.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            l.setForeground(GuiTheme.COLOR_TEXT);
+            l.setBorder(new EmptyBorder(0, 22, 0, 10));
+            if (value instanceof User) {
                 l.setText(((User) value).getId());
             }
             return l;
@@ -587,7 +508,7 @@ public class ManagePanel extends JPanel {
         }
     }
 
-    private static class PlainCellRenderer extends DefaultTableCellRenderer {
+    private static class RoomDataRenderer extends DefaultTableCellRenderer {
         private static final long serialVersionUID = 1L;
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
@@ -603,7 +524,21 @@ public class ManagePanel extends JPanel {
                 } else if (col == 3) {
                     l.setText(r.getFeatures().isEmpty() ? "—" : String.join(", ", r.getFeatures()));
                 }
-            } else if (value instanceof User) {
+            }
+            return l;
+        }
+    }
+
+    private static class UserDataRenderer extends DefaultTableCellRenderer {
+        private static final long serialVersionUID = 1L;
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int col) {
+            JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
+            l.setFont(GuiTheme.FONT_BODY);
+            l.setForeground(new Color(69, 80, 93));
+            l.setBorder(new EmptyBorder(0, 10, 0, 10));
+            if (value instanceof User) {
                 User u = (User) value;
                 if (col == 1) {
                     l.setText(u.getName().replace("_", " "));
@@ -756,6 +691,134 @@ public class ManagePanel extends JPanel {
         @Override
         public Object getCellEditorValue() {
             return currentUser;
+        }
+    }
+    private class RoomsTableClickListener extends java.awt.event.MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            int row = roomsTable.rowAtPoint(e.getPoint());
+            int col = roomsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < roomsList.size()) {
+                handleActionClick(e, row, col);
+            }
+        }
+
+        private void handleActionClick(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = roomsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            Room r = roomsList.get(row);
+            if (clickX >= rightX - 84 && clickX <= rightX - 16) {
+                onDeleteRoom(r);
+            } else if (clickX >= rightX - 144 && clickX <= rightX - 90) {
+                onEditRoom(r);
+            }
+        }
+    }
+
+    private class RoomsTableMotionListener extends MouseMotionAdapter {
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            int row = roomsTable.rowAtPoint(e.getPoint());
+            int col = roomsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < roomsList.size()) {
+                checkHover(e, row, col);
+                return;
+            }
+            roomsTable.setCursor(Cursor.getDefaultCursor());
+        }
+
+        private void checkHover(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = roomsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            boolean overDel = (clickX >= rightX - 84 && clickX <= rightX - 16);
+            boolean overEdit = (clickX >= rightX - 144 && clickX <= rightX - 90);
+            if (overDel || overEdit) {
+                roomsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+                roomsTable.setCursor(Cursor.getDefaultCursor());
+            }
+        }
+    }
+
+    private class UsersTableClickListener extends java.awt.event.MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            int row = usersTable.rowAtPoint(e.getPoint());
+            int col = usersTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 3 && row < usersList.size()) {
+                handleUserActionClick(e, row, col);
+            }
+        }
+
+        private void handleUserActionClick(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = usersTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            User u = usersList.get(row);
+            boolean hasRole = controller.isSuperadmin() && !u.getId().equalsIgnoreCase("u1");
+            boolean hasRemove = (u.getRole() == UserRole.REGULAR);
+
+            if (hasRole && hasRemove) {
+                dispatchCombinedAction(clickX, rightX, u);
+            } else if (hasRole) {
+                dispatchRoleAction(clickX, rightX, u);
+            } else if (hasRemove) {
+                dispatchRemoveAction(clickX, rightX, u);
+            }
+        }
+
+        private void dispatchCombinedAction(int clickX, int rightX, User u) {
+            if (clickX >= rightX - 88 && clickX <= rightX - 16) {
+                onRemoveUser(u);
+            } else if (clickX >= rightX - 194 && clickX <= rightX - 94) {
+                onChangeRole(u);
+            }
+        }
+
+        private void dispatchRoleAction(int clickX, int rightX, User u) {
+            if (clickX >= rightX - 116 && clickX <= rightX - 16) {
+                onChangeRole(u);
+            }
+        }
+
+        private void dispatchRemoveAction(int clickX, int rightX, User u) {
+            if (clickX >= rightX - 88 && clickX <= rightX - 16) {
+                onRemoveUser(u);
+            }
+        }
+    }
+
+    private class UsersTableMotionListener extends MouseMotionAdapter {
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            int row = usersTable.rowAtPoint(e.getPoint());
+            int col = usersTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 3 && row < usersList.size()) {
+                checkHover(e, row, col);
+                return;
+            }
+            usersTable.setCursor(Cursor.getDefaultCursor());
+        }
+
+        private void checkHover(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = usersTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            User u = usersList.get(row);
+            boolean hasRole = controller.isSuperadmin() && !u.getId().equalsIgnoreCase("u1");
+            boolean hasRemove = (u.getRole() == UserRole.REGULAR);
+
+            boolean overRem = hasRemove && (clickX >= rightX - 88 && clickX <= rightX - 16);
+            boolean overRole = (hasRole && hasRemove && (clickX >= rightX - 194 && clickX <= rightX - 94))
+                    || (hasRole && !hasRemove && (clickX >= rightX - 116 && clickX <= rightX - 16));
+
+            if (overRem || overRole) {
+                usersTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+                usersTable.setCursor(Cursor.getDefaultCursor());
+            }
         }
     }
 }

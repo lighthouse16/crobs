@@ -147,46 +147,8 @@ public class MyBookingsPanel extends JPanel {
         bookingsTable.getColumnModel().getColumn(4).setCellRenderer(new ActionsCellRenderer());
 
         // Instant single-click action listener on column 4
-        bookingsTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int row = bookingsTable.rowAtPoint(e.getPoint());
-                int col = bookingsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < currentBookings.size()) {
-                    java.awt.Rectangle rect = bookingsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    Booking b = currentBookings.get(row);
-                    // Cancel button: rightX - 84 to rightX - 16
-                    if (clickX >= rightX - 84 && clickX <= rightX - 16) {
-                        onCancelBooking(b);
-                    } else if (clickX >= rightX - 144 && clickX <= rightX - 90) {
-                        // Edit button: rightX - 144 to rightX - 90
-                        onEditBooking(b);
-                    }
-                }
-            }
-        });
-
-        bookingsTable.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                int row = bookingsTable.rowAtPoint(e.getPoint());
-                int col = bookingsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < currentBookings.size()) {
-                    java.awt.Rectangle rect = bookingsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    boolean overCancel = (clickX >= rightX - 84 && clickX <= rightX - 16);
-                    boolean overEdit = (clickX >= rightX - 144 && clickX <= rightX - 90);
-                    if (overCancel || overEdit) {
-                        bookingsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        return;
-                    }
-                }
-                bookingsTable.setCursor(Cursor.getDefaultCursor());
-            }
-        });
+        bookingsTable.addMouseListener(new BookingsTableClickListener());
+        bookingsTable.addMouseMotionListener(new BookingsTableMotionListener());
 
         JScrollPane scroll = new JScrollPane(bookingsTable);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -492,4 +454,53 @@ public class MyBookingsPanel extends JPanel {
             return currentBooking;
         }
     }
+    private class BookingsTableClickListener extends java.awt.event.MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            int row = bookingsTable.rowAtPoint(e.getPoint());
+            int col = bookingsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < currentBookings.size()) {
+                handleBookingActionClick(e, row, col);
+            }
+        }
+
+        private void handleBookingActionClick(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = bookingsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            Booking b = currentBookings.get(row);
+            if (clickX >= rightX - 84 && clickX <= rightX - 16) {
+                onCancelBooking(b);
+            } else if (clickX >= rightX - 144 && clickX <= rightX - 90) {
+                onEditBooking(b);
+            }
+        }
+    }
+
+    private class BookingsTableMotionListener extends MouseMotionAdapter {
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            int row = bookingsTable.rowAtPoint(e.getPoint());
+            int col = bookingsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < currentBookings.size()) {
+                checkHover(e, row, col);
+                return;
+            }
+            bookingsTable.setCursor(Cursor.getDefaultCursor());
+        }
+
+        private void checkHover(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = bookingsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            boolean overCancel = (clickX >= rightX - 84 && clickX <= rightX - 16);
+            boolean overEdit = (clickX >= rightX - 144 && clickX <= rightX - 90);
+            if (overCancel || overEdit) {
+                bookingsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+                bookingsTable.setCursor(Cursor.getDefaultCursor());
+            }
+        }
+    }
+
 }

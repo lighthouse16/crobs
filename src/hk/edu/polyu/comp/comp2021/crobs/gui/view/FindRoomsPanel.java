@@ -346,48 +346,8 @@ public class FindRoomsPanel extends JPanel {
         resultsTable.getColumnModel().getColumn(4).setCellRenderer(new ActionButtonsRenderer());
 
         // Instant single-click action listener on column 4
-        resultsTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                int row = resultsTable.rowAtPoint(e.getPoint());
-                int col = resultsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < currentDisplayItems.size()) {
-                    java.awt.Rectangle rect = resultsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    RoomDisplayItem item = currentDisplayItems.get(row);
-                    // Book room button: rightX - 104 to rightX - 8
-                    if (clickX >= rightX - 104 && clickX <= rightX - 8) {
-                        if (item.isAvailable) {
-                            openBookingDrawer(item.room);
-                        }
-                    } else if (clickX >= rightX - 200 && clickX <= rightX - 112) {
-                        onViewWeekClicked(item.room);
-                    }
-                }
-            }
-        });
-
-        resultsTable.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                int row = resultsTable.rowAtPoint(e.getPoint());
-                int col = resultsTable.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 4 && row < currentDisplayItems.size()) {
-                    java.awt.Rectangle rect = resultsTable.getCellRect(row, col, false);
-                    int clickX = e.getX() - rect.x;
-                    int rightX = rect.width;
-                    RoomDisplayItem item = currentDisplayItems.get(row);
-                    boolean overBook = (clickX >= rightX - 104 && clickX <= rightX - 8 && item.isAvailable);
-                    boolean overWeek = (clickX >= rightX - 200 && clickX <= rightX - 112);
-                    if (overBook || overWeek) {
-                        resultsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        return;
-                    }
-                }
-                resultsTable.setCursor(Cursor.getDefaultCursor());
-            }
-        });
+        resultsTable.addMouseListener(new ResultsTableClickListener());
+        resultsTable.addMouseMotionListener(new ResultsTableMotionListener());
 
         JScrollPane scroll = new JScrollPane(resultsTable);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -730,4 +690,56 @@ public class FindRoomsPanel extends JPanel {
             return currentItem;
         }
     }
+    private class ResultsTableClickListener extends java.awt.event.MouseAdapter {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            int row = resultsTable.rowAtPoint(e.getPoint());
+            int col = resultsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < currentDisplayItems.size()) {
+                handleActionClick(e, row, col);
+            }
+        }
+
+        private void handleActionClick(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = resultsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            RoomDisplayItem item = currentDisplayItems.get(row);
+            if (clickX >= rightX - 104 && clickX <= rightX - 8) {
+                if (item.isAvailable) {
+                    openBookingDrawer(item.room);
+                }
+            } else if (clickX >= rightX - 200 && clickX <= rightX - 112) {
+                onViewWeekClicked(item.room);
+            }
+        }
+    }
+
+    private class ResultsTableMotionListener extends MouseMotionAdapter {
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            int row = resultsTable.rowAtPoint(e.getPoint());
+            int col = resultsTable.columnAtPoint(e.getPoint());
+            if (row >= 0 && col == 4 && row < currentDisplayItems.size()) {
+                checkHover(e, row, col);
+                return;
+            }
+            resultsTable.setCursor(Cursor.getDefaultCursor());
+        }
+
+        private void checkHover(MouseEvent e, int row, int col) {
+            java.awt.Rectangle rect = resultsTable.getCellRect(row, col, false);
+            int clickX = e.getX() - rect.x;
+            int rightX = rect.width;
+            RoomDisplayItem item = currentDisplayItems.get(row);
+            boolean overBook = (clickX >= rightX - 104 && clickX <= rightX - 8 && item.isAvailable);
+            boolean overWeek = (clickX >= rightX - 200 && clickX <= rightX - 112);
+            if (overBook || overWeek) {
+                resultsTable.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            } else {
+                resultsTable.setCursor(Cursor.getDefaultCursor());
+            }
+        }
+    }
+
 }

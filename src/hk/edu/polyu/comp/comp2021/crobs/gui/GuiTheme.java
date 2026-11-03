@@ -83,27 +83,32 @@ public final class GuiTheme {
     /**
      * Creates a primary filled action button (#214f99).
      */
-    public static JButton createPrimaryButton(String text) {
-        JButton btn = new JButton(text) {
-            private static final long serialVersionUID = 1L;
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (!isEnabled()) {
-                    g2.setColor(new Color(190, 205, 228));
-                } else if (getModel().isPressed()) {
-                    g2.setColor(COLOR_BLUE_HOVER);
-                } else if (getModel().isRollover()) {
-                    g2.setColor(COLOR_BLUE_HOVER);
-                } else {
-                    g2.setColor(COLOR_BLUE);
-                }
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                g2.dispose();
-                super.paintComponent(g);
+    private static class PrimaryButton extends JButton {
+        private static final long serialVersionUID = 1L;
+        PrimaryButton(String text) {
+            super(text);
+        }
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            if (!isEnabled()) {
+                g2.setColor(new Color(190, 205, 228));
+            } else if (getModel().isPressed()) {
+                g2.setColor(COLOR_BLUE_HOVER);
+            } else if (getModel().isRollover()) {
+                g2.setColor(COLOR_BLUE_HOVER);
+            } else {
+                g2.setColor(COLOR_BLUE);
             }
-        };
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    public static JButton createPrimaryButton(String text) {
+        JButton btn = new PrimaryButton(text);
         btn.setFont(FONT_BODY_BOLD);
         btn.setForeground(Color.WHITE);
         btn.setContentAreaFilled(false);
@@ -296,80 +301,80 @@ public final class GuiTheme {
     }
 
     /**
-     * Creates an abstract, modernist geometric campus floorplan logo mark.
+     * Abstract, modernist geometric campus floorplan logo mark.
      * Pure geometric architecture (outer frame with 4 modular room quadrants),
      * mathematically scaled to ensure 100% visual consistency without decorative fluff.
-     *
-     * @param size icon width and height in pixels.
-     * @return consistent JComponent brand mark.
      */
+    private static class BrandLogoComponent extends JComponent {
+        private static final long serialVersionUID = 1L;
+        private final int size;
+
+        /**
+         * @param size icon width and height in pixels.
+         */
+        BrandLogoComponent(int size) {
+            this.size = size;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+            g2.setColor(COLOR_BRAND);
+
+            float strokeWidth = Math.max(1.8f, size * 0.08f);
+            g2.setStroke(new java.awt.BasicStroke(strokeWidth, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+
+            float pad = strokeWidth / 2f + 0.5f;
+            float frameSize = size - pad * 2f;
+            float radius = size * 0.24f;
+
+            java.awt.geom.RoundRectangle2D frame = new java.awt.geom.RoundRectangle2D.Float(
+                    pad, pad, frameSize, frameSize, radius, radius
+            );
+            g2.draw(frame);
+
+            float innerPad = size * 0.22f;
+            float cellGap = Math.max(2.5f, size * 0.12f);
+            float cellW = (size - 2f * innerPad - cellGap) / 2f;
+            float cellCorner = Math.max(1.5f, size * 0.05f);
+
+            g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                    innerPad, innerPad, cellW, cellW, cellCorner, cellCorner
+            ));
+            g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                    innerPad + cellW + cellGap, innerPad, cellW, cellW, cellCorner, cellCorner
+            ));
+            g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                    innerPad, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
+            ));
+            g2.fill(new java.awt.geom.RoundRectangle2D.Float(
+                    innerPad + cellW + cellGap, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
+            ));
+
+            g2.dispose();
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            return new Dimension(size, size);
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            return new Dimension(size, size);
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return new Dimension(size, size);
+        }
+    }
+
     public static JComponent createBrandLogo(int size) {
-        return new JComponent() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-
-                // Deep Slate Navy #26313d
-                g2.setColor(COLOR_BRAND);
-
-                // Outer structural perimeter: rounded squircle with crisp stroke
-                float strokeWidth = Math.max(1.8f, size * 0.08f);
-                g2.setStroke(new java.awt.BasicStroke(strokeWidth, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-
-                float pad = strokeWidth / 2f + 0.5f;
-                float frameSize = size - pad * 2f;
-                float radius = size * 0.24f;
-
-                java.awt.geom.RoundRectangle2D frame = new java.awt.geom.RoundRectangle2D.Float(
-                        pad, pad, frameSize, frameSize, radius, radius
-                );
-                g2.draw(frame);
-
-                // 4 inner modular room cells (2x2 architectural grid)
-                float innerPad = size * 0.22f;
-                float cellGap = Math.max(2.5f, size * 0.12f);
-                float cellW = (size - 2f * innerPad - cellGap) / 2f;
-                float cellCorner = Math.max(1.5f, size * 0.05f);
-
-                // Top-Left cell
-                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
-                        innerPad, innerPad, cellW, cellW, cellCorner, cellCorner
-                ));
-                // Top-Right cell
-                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
-                        innerPad + cellW + cellGap, innerPad, cellW, cellW, cellCorner, cellCorner
-                ));
-                // Bottom-Left cell
-                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
-                        innerPad, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
-                ));
-                // Bottom-Right cell
-                g2.fill(new java.awt.geom.RoundRectangle2D.Float(
-                        innerPad + cellW + cellGap, innerPad + cellW + cellGap, cellW, cellW, cellCorner, cellCorner
-                ));
-
-                g2.dispose();
-            }
-
-            @Override
-            public Dimension getPreferredSize() {
-                return new Dimension(size, size);
-            }
-
-            @Override
-            public Dimension getMinimumSize() {
-                return new Dimension(size, size);
-            }
-
-            @Override
-            public Dimension getMaximumSize() {
-                return new Dimension(size, size);
-            }
-        };
+        return new BrandLogoComponent(size);
     }
 }
