@@ -162,11 +162,11 @@ public class Application {
                 break;
 
             case "addRoom": // [REQ7]
-                if (tokens.length < 4) throw new IllegalArgumentException("Usage: addRoom <roomType> <capacity> <features>");
+                if (tokens.length < 3) throw new IllegalArgumentException("Usage: addRoom <roomType> <capacity> [features]");
                 RoomType rType = RoomType.fromString(tokens[1]);
                 if (rType == null) throw new IllegalArgumentException("Invalid room type: " + tokens[1]);
                 int capacity = Integer.parseInt(tokens[2]);
-                Set<String> features = parseFeatures(tokens[3]);
+                Set<String> features = parseFeatures(tokens.length >= 4 ? tokens[3] : "-");
                 Room newRoom = crobs.addRoom(rType, capacity, features);
                 System.out.println("Room created: " + newRoom.getId());
                 break;
@@ -208,12 +208,12 @@ public class Application {
                 break;
 
             case "search": // [REQ13]
-                if (tokens.length < 6) throw new IllegalArgumentException("Usage: search <date> <startTime> <endTime> <minCapacity> <features>");
+                if (tokens.length < 5) throw new IllegalArgumentException("Usage: search <date> <startTime> <endTime> <minCapacity> [features]");
                 LocalDate sDate = parseDate(tokens[1]);
                 LocalTime sStart = parseTime(tokens[2]);
                 LocalTime sEnd = parseTime(tokens[3]);
                 int minCap = Integer.parseInt(tokens[4]);
-                Set<String> reqFeatures = parseFeatures(tokens[5]);
+                Set<String> reqFeatures = parseFeatures(tokens.length >= 6 ? tokens[5] : "-");
                 List<Room> foundRooms = crobs.search(sDate, sStart, sEnd, minCap, reqFeatures);
                 System.out.println("Available Rooms (" + foundRooms.size() + "):");
                 for (Room r : foundRooms) {
@@ -280,7 +280,7 @@ public class Application {
 
     private Set<String> parseFeatures(String str) {
         Set<String> set = new HashSet<>();
-        if (str != null && !str.trim().isEmpty()) {
+        if (str != null && !str.trim().isEmpty() && !"-".equals(str.trim())) {
             for (String f : str.split(",")) {
                 if (!f.trim().isEmpty()) {
                     set.add(f.trim());

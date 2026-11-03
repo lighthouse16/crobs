@@ -32,6 +32,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import java.awt.GraphicsEnvironment;
 
 /**
  * Unit test suite for the CROBS Java Swing GUI architecture (BON1).
@@ -122,7 +125,7 @@ public class CrobsGuiTest {
         assertEquals(UserRole.REGULAR, user.getRole());
 
         controller.changeRole(user.getId(), UserRole.ADMIN);
-        assertEquals(UserRole.ADMIN, user.getRole());
+        assertEquals(UserRole.ADMIN, controller.getAllKnownUsers().stream().filter(u -> u.getId().equals(user.getId())).findFirst().get().getRole());
     }
 
     @Test
@@ -139,14 +142,14 @@ public class CrobsGuiTest {
         assertEquals(50, room.getCapacity());
 
         controller.modifyRoom(roomId, "capacity", "60");
-        assertEquals(60, room.getCapacity());
+        assertEquals(60, controller.getRoomQuiet(roomId).getCapacity());
 
         controller.modifyRoom(roomId, "type", "meetingRoom");
-        assertEquals(RoomType.meetingRoom, room.getType());
+        assertEquals(RoomType.meetingRoom, controller.getRoomQuiet(roomId).getType());
 
         controller.modifyRoom(roomId, "features", "Whiteboard");
-        assertTrue(room.getFeatures().contains("Whiteboard"));
-        assertFalse(room.getFeatures().contains("Projector"));
+        assertTrue(controller.getRoomQuiet(roomId).getFeatures().contains("Whiteboard"));
+        assertFalse(controller.getRoomQuiet(roomId).getFeatures().contains("Projector"));
 
         List<Room> allRooms = controller.getAllRoomsQuiet();
         assertTrue(allRooms.stream().anyMatch(r -> r.getId().equalsIgnoreCase(roomId)));
@@ -181,8 +184,8 @@ public class CrobsGuiTest {
         // Test modify booking
         LocalTime newEnd = LocalTime.of(12, 30);
         controller.modifyBooking(booking.getId(), roomId, date, start, newEnd, "Extended Session");
-        assertEquals(newEnd, booking.getEndTime());
-        assertEquals("Extended_Session", booking.getPurpose());
+        assertEquals(newEnd, controller.getBookingsQuiet().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getEndTime());
+        assertEquals("Extended_Session", controller.getBookingsQuiet().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getPurpose());
 
         // Test cancel booking
         controller.deleteBooking(booking.getId());
@@ -212,7 +215,23 @@ public class CrobsGuiTest {
         assertFalse(studentView.isEmpty());
         Booking studentB = studentView.get(0);
         assertEquals(booking.getId(), studentB.getId());
+        assertEquals("(hidden)", studentB.getUserId());
+        assertEquals("Private_Superadmin_Meeting", studentB.getPurpose());
         assertFalse(controller.isAdmin());
+    }
+
+    @Test
+    void testEmptyFeatureCommandsUseReplayableSentinel() throws IOException, CrobsException {
+        controller.login("u1");
+        controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        controller.search(LocalDate.now().plusDays(1), LocalTime.of(9, 0),
+                LocalTime.of(10, 0), 1, Collections.emptySet());
+        controller.closeLogger();
+
+        String txtContent = new String(Files.readAllBytes(tempTxt.toPath()));
+        assertTrue(txtContent.contains("addRoom meetingRoom 10 -"));
+        assertTrue(txtContent.contains("search "));
+        assertTrue(txtContent.contains(" 1 -"));
     }
 
     @Test
@@ -249,6 +268,7 @@ public class CrobsGuiTest {
         ManagePanel managePanel = new ManagePanel(controller);
         assertNotNull(managePanel);
 
+        assumeFalse(GraphicsEnvironment.isHeadless(), "Top-level window dialogs require a display");
         JFrame frame = new JFrame();
         LoginDialog loginDialog = new LoginDialog(frame, controller);
         assertNotNull(loginDialog);
@@ -262,6 +282,7 @@ public class CrobsGuiTest {
 
     @Test
     void testMainFrameAndDrawerInteraction() throws CrobsException {
+        assumeFalse(GraphicsEnvironment.isHeadless(), "MainFrame requires a display");
         controller.loginQuiet("u1");
         MainFrame mainFrame = new MainFrame(controller);
         assertNotNull(mainFrame);
@@ -290,6 +311,7 @@ public class CrobsGuiTest {
 
     @Test
     void testMainFrameUndoRedo() throws CrobsException {
+        assumeFalse(GraphicsEnvironment.isHeadless(), "MainFrame requires a display");
         controller.loginQuiet("u1");
         MainFrame mainFrame = new MainFrame(controller);
         assertNotNull(mainFrame);

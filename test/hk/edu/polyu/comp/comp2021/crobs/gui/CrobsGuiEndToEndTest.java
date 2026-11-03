@@ -75,7 +75,8 @@ public class CrobsGuiEndToEndTest {
 
         // Step 4: Promote Alice to ADMIN
         controller.changeRole(alice.getId(), UserRole.ADMIN);
-        assertEquals(UserRole.ADMIN, alice.getRole());
+        assertEquals(UserRole.ADMIN, controller.getAllKnownUsers().stream()
+                .filter(u -> u.getId().equals(alice.getId())).findFirst().get().getRole());
 
         // Step 5: Add Room R1 (computerLab, 40 seats, Projector, Wi-Fi)
         Room r1 = controller.addRoom(RoomType.computerLab, 40, new HashSet<>(Arrays.asList("Projector", "Wi-Fi")));
@@ -94,7 +95,7 @@ public class CrobsGuiEndToEndTest {
 
         // Step 8: Modify Room R1 capacity from 40 to 45
         controller.modifyRoom(r1Id, "capacity", "45");
-        assertEquals(45, r1.getCapacity());
+        assertEquals(45, controller.getRoomQuiet(r1Id).getCapacity());
 
         // Step 9: Search available rooms for tomorrow 09:00 - 11:00 (REQ13)
         LocalDate tomorrow = LocalDate.now().plusDays(1);
@@ -151,8 +152,10 @@ public class CrobsGuiEndToEndTest {
         // Step 19: Modify booking b1 end time from 11:00 to 11:30 (REQ11)
         LocalTime t1130 = LocalTime.of(11, 30);
         controller.modifyBooking(b1.getId(), r1Id, tomorrow, t0900, t1130, "Extended_COMP2021_Lecture");
-        assertEquals(t1130, b1.getEndTime());
-        assertEquals("Extended_COMP2021_Lecture", b1.getPurpose());
+        Booking modifiedB1 = controller.schedule(r1Id, tomorrow).stream()
+                .filter(b -> b.getId().equals(b1.getId())).findFirst().get();
+        assertEquals(t1130, modifiedB1.getEndTime());
+        assertEquals("Extended_COMP2021_Lecture", modifiedB1.getPurpose());
 
         // Step 20: Cancel booking b2 as Alice or Admin
         controller.login(alice.getId());

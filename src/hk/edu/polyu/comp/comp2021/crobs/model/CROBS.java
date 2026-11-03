@@ -62,7 +62,7 @@ public class CROBS {
      * @return current User or null if no user is logged in.
      */
     public User getCurrentUser() {
-        return currentUser;
+        return snapshot(currentUser);
     }
 
     /**
@@ -124,8 +124,8 @@ public class CROBS {
         String newId = generateUserId();
         User newUser = new User(newId, name.trim(), UserRole.REGULAR);
         users.put(newUser.getId().toLowerCase(), newUser);
-        undoRedoManager.recordExecutedCommand(new AddUserCommand(this, newUser));
-        return newUser;
+        recordCommand(new AddUserCommand(this, newUser), UndoRedoManager.Permission.ADMIN);
+        return snapshot(newUser);
     }
 
     /**
@@ -139,7 +139,8 @@ public class CROBS {
         if (targetUserId == null || targetUserId.trim().isEmpty()) {
             throw new IllegalArgumentException("Target user ID cannot be blank");
         }
-        User target = users.get(targetUserId.trim().toLowerCase());
+        String targetId = targetUserId.trim().toLowerCase();
+        User target = users.get(targetId);
         if (target == null) {
             throw new CrobsException("Target user not found: " + targetUserId);
         }
@@ -147,17 +148,17 @@ public class CROBS {
             throw new CrobsException("Cannot remove admin or superadmin user.");
         }
 
-        users.remove(targetUserId.toLowerCase());
+        users.remove(targetId);
         List<Booking> userBookings = new ArrayList<>();
         for (Booking b : bookings.values()) {
-            if (b.getUserId().equalsIgnoreCase(targetUserId)) {
+            if (b.getUserId().equalsIgnoreCase(targetId)) {
                 userBookings.add(b);
             }
         }
         for (Booking b : userBookings) {
             bookings.remove(b.getId().toLowerCase());
         }
-        undoRedoManager.recordExecutedCommand(new RemoveUserCommand(this, target, userBookings));
+        recordCommand(new RemoveUserCommand(this, target, userBookings), UndoRedoManager.Permission.ADMIN);
     }
 
     /**
@@ -174,14 +175,15 @@ public class CROBS {
         if (targetUserId == null || newRole == null) {
             throw new IllegalArgumentException("Arguments cannot be null");
         }
-        User target = users.get(targetUserId.trim().toLowerCase());
+        String targetId = targetUserId.trim().toLowerCase();
+        User target = users.get(targetId);
         if (target == null) {
             throw new CrobsException("User not found: " + targetUserId);
         }
 
         UserRole oldRole = target.getRole();
         target.setRole(newRole);
-        undoRedoManager.recordExecutedCommand(new ChangeRoleCommand(this, targetUserId, oldRole, newRole));
+        recordCommand(new ChangeRoleCommand(this, targetId, oldRole, newRole), UndoRedoManager.Permission.SUPERADMIN);
     }
 
     /**
@@ -190,7 +192,10 @@ public class CROBS {
      * @return sorted list of all registered users.
      */
     public List<User> listAllUsers() {
-        List<User> userList = new ArrayList<>(users.values());
+        List<User> userList = new ArrayList<>();
+        for (User user : users.values()) {
+            userList.add(snapshot(user));
+        }
         userList.sort(Comparator.comparing(User::getId));
         return Collections.unmodifiableList(userList);
     }
@@ -215,8 +220,8 @@ public class CROBS {
         String roomId = generateRoomId();
         Room room = new Room(roomId, roomType, capacity, features);
         rooms.put(room.getId().toLowerCase(), room);
-        undoRedoManager.recordExecutedCommand(new AddRoomCommand(this, room));
-        return room;
+        recordCommand(new AddRoomCommand(this, room), UndoRedoManager.Permission.ADMIN);
+        return snapshot(room);
     }
 
     /**
@@ -265,7 +270,7 @@ public class CROBS {
             throw new CrobsException("Invalid field: " + field);
         }
 
-        undoRedoManager.recordExecutedCommand(new ModifyRoomCommand(this, room.getId(), field, oldValue, newValue));
+        recordCommand(new ModifyRoomCommand(this, room.getId(), field, oldValue, newValue), UndoRedoManager.Permission.ADMIN);
     }
 
     /**
@@ -288,7 +293,7 @@ public class CROBS {
         for (Booking b : futureBookings) {
             bookings.remove(b.getId().toLowerCase());
         }
-        undoRedoManager.recordExecutedCommand(new DeleteRoomCommand(this, room, futureBookings));
+        recordCommand(new DeleteRoomCommand(this, room, futureBookings), UndoRedoManager.Permission.ADMIN);
     }
 
     /**
@@ -299,7 +304,7 @@ public class CROBS {
      * @throws CrobsException if room does not exist.
      */
     public Room listRoom(String roomId) throws CrobsException {
-        return getRoomOrThrow(roomId);
+        return snapshot(getRoomOrThrow(roomId));
     }
 
     /**
@@ -308,7 +313,10 @@ public class CROBS {
      * @return sorted list of all rooms.
      */
     public List<Room> listAllRooms() {
-        List<Room> roomList = new ArrayList<>(rooms.values());
+        List<Room> roomList = new ArrayList<>();
+        for (Room room : rooms.values()) {
+            roomList.add(snapshot(room));
+        }
         roomList.sort(Comparator.comparing(Room::getId));
         return Collections.unmodifiableList(roomList);
     }
@@ -332,17 +340,20 @@ public class CROBS {
     public Booking book(String roomId, LocalDate date, LocalTime startTime,
                         LocalTime endTime, String purpose) throws CrobsException {
         checkLoggedIn();
-        getRoomOrThrow(roomId);
+        String normalizedRoomId = normalizeId(roomId, "Room ID");
+        Room room = getRoomOrThrow(normalizedRoomId);
+        validateBookingValues(date, startTime, endTime);
 
         for (Booking b : bookings.values()) {
-            if (b.conflictsWith(roomId, date, startTime, endTime)) {
+            if (b.conflictsWith(room.getId(), date, startTime, endTime)) {
                 throw new CrobsException("Time conflict with existing booking.");
             }
         }
-        Booking newBooking = new Booking(generateBookingId(), roomId, currentUser.getId(), date, startTime, endTime, purpose);
+        Booking newBooking = new Booking(generateBookingId(), room.getId(), currentUser.getId(),
+                date, startTime, endTime, purpose);
         bookings.put(newBooking.getId().toLowerCase(), newBooking);
-        undoRedoManager.recordExecutedCommand(new BookCommand(this, newBooking));
-        return newBooking;
+        recordCommand(new BookCommand(this, newBooking), UndoRedoManager.Permission.LOGGED_IN);
+        return snapshot(newBooking);
     }
 
     /**
@@ -364,10 +375,13 @@ public class CROBS {
         if (!booking.getUserId().equalsIgnoreCase(currentUser.getId())) {
             throw new CrobsException("Permission denied: You can only modify your own bookings.");
         }
-        getRoomOrThrow(roomId);
+        String normalizedRoomId = normalizeId(roomId, "Room ID");
+        Room room = getRoomOrThrow(normalizedRoomId);
+        validateBookingValues(date, startTime, endTime);
 
         for (Booking b : bookings.values()) {
-            if (!b.getId().equalsIgnoreCase(bookingId) && b.conflictsWith(roomId, date, startTime, endTime)) {
+            if (!b.getId().equalsIgnoreCase(bookingId)
+                    && b.conflictsWith(room.getId(), date, startTime, endTime)) {
                 throw new CrobsException("Time conflict with existing booking.");
             }
         }
@@ -378,15 +392,13 @@ public class CROBS {
         LocalTime oldEndTime = booking.getEndTime();
         String oldPurpose = booking.getPurpose();
 
-        booking.setRoomId(roomId);
-        booking.setDate(date);
-        booking.setTimeInterval(startTime, endTime);
-        booking.setPurpose(purpose);
+        booking.update(room.getId(), date, startTime, endTime, purpose);
 
-        undoRedoManager.recordExecutedCommand(new ModifyBookingCommand(
+        recordCommand(new ModifyBookingCommand(
                 this, bookingId,
                 oldRoomId, oldDate, oldStartTime, oldEndTime, oldPurpose,
-                roomId, date, startTime, endTime, purpose));
+                room.getId(), date, startTime, endTime, purpose),
+                UndoRedoManager.Permission.LOGGED_IN);
     }
 
     /**
@@ -402,7 +414,7 @@ public class CROBS {
             throw new CrobsException("Permission denied: You can only delete your own bookings.");
         }
         bookings.remove(booking.getId().toLowerCase());
-        undoRedoManager.recordExecutedCommand(new DeleteBookingCommand(this, booking));
+        recordCommand(new DeleteBookingCommand(this, booking), UndoRedoManager.Permission.LOGGED_IN);
     }
 
     /**
@@ -417,7 +429,7 @@ public class CROBS {
         List<Booking> bookingList = new ArrayList<>();
         for (Booking b : bookings.values()) {
             if (b.getUserId().equalsIgnoreCase(currentUser.getId())) {
-                bookingList.add(b);
+                bookingList.add(snapshot(b));
             }
         }
         bookingList.sort(Comparator.comparing(Booking::getDate).thenComparing(Booking::getStartTime));
@@ -451,7 +463,7 @@ public class CROBS {
                     }
                 }
                 if (!hasConflict) {
-                    result.add(r);
+                    result.add(snapshot(r));
                 }
             }
         }
@@ -471,18 +483,26 @@ public class CROBS {
     public List<Booking> schedule(String roomId, LocalDate weekStartDate) throws CrobsException {
         checkLoggedIn();
         Room room = getRoomOrThrow(roomId);
+        if (weekStartDate == null) {
+            throw new IllegalArgumentException("Week start date cannot be null");
+        }
         LocalDate weekEndDate = weekStartDate.plusDays(7);
+        boolean isAdmin = currentUser != null && currentUser.getRole() != UserRole.REGULAR;
+        String currentId = currentUser != null ? currentUser.getId() : "";
 
         List<Booking> result = new ArrayList<>();
         for (Booking b : bookings.values()) {
             if (b.getRoomId().equalsIgnoreCase(room.getId())
                     && b.getDate().isBefore(weekEndDate)
                     && !b.getDate().isBefore(weekStartDate)) {
-                result.add(b);
+                String visibleUserId = (isAdmin || b.getUserId().equalsIgnoreCase(currentId))
+                        ? b.getUserId() : "(hidden)";
+                result.add(new Booking(b.getId(), b.getRoomId(), visibleUserId,
+                        b.getDate(), b.getStartTime(), b.getEndTime(), b.getPurpose()));
             }
         }
         result.sort(Comparator.comparing(Booking::getDate).thenComparing(Booking::getStartTime));
-        return result;
+        return Collections.unmodifiableList(result);
     }
 
     // ==========================================
@@ -674,10 +694,10 @@ public class CROBS {
     public void modifyBookingDirect(String bookingId, String roomId, LocalDate date,
                                     LocalTime startTime, LocalTime endTime, String purpose) throws CrobsException {
         Booking booking = getBookingOrThrow(bookingId);
-        booking.setRoomId(roomId);
-        booking.setDate(date);
-        booking.setTimeInterval(startTime, endTime);
-        booking.setPurpose(purpose);
+        String normalizedRoomId = normalizeId(roomId, "Room ID");
+        Room room = getRoomOrThrow(normalizedRoomId);
+        validateBookingValues(date, startTime, endTime);
+        booking.update(room.getId(), date, startTime, endTime, purpose);
     }
 
     /**
@@ -687,7 +707,8 @@ public class CROBS {
      * @throws CrobsException if undo fails.
      */
     public boolean undo() throws CrobsException {
-        return undoRedoManager.undo();
+        checkLoggedIn();
+        return undoRedoManager.undo(currentUser.getId(), currentUser.getRole());
     }
 
     /**
@@ -697,33 +718,71 @@ public class CROBS {
      * @throws CrobsException if redo fails.
      */
     public boolean redo() throws CrobsException {
-        return undoRedoManager.redo();
+        checkLoggedIn();
+        return undoRedoManager.redo(currentUser.getId(), currentUser.getRole());
     }
 
     /**
-     * Checks if undo is available.
+     * Checks if undo is available to the current authenticated user.
      *
-     * @return true if undo stack is not empty.
+     * @return true if the latest undo entry belongs to and is authorized for the current user.
      */
     public boolean canUndo() {
-        return undoRedoManager.canUndo();
+        return currentUser != null
+                && undoRedoManager.canUndo(currentUser.getId(), currentUser.getRole());
     }
 
     /**
-     * Checks if redo is available.
+     * Checks if redo is available to the current authenticated user.
      *
-     * @return true if redo stack is not empty.
+     * @return true if the latest redo entry belongs to and is authorized for the current user.
      */
     public boolean canRedo() {
-        return undoRedoManager.canRedo();
+        return currentUser != null
+                && undoRedoManager.canRedo(currentUser.getId(), currentUser.getRole());
+    }
+
+    private void recordCommand(CrobsCommand command, UndoRedoManager.Permission permission) {
+        undoRedoManager.recordExecutedCommand(command, currentUser.getId(), permission);
+    }
+
+    private static String normalizeId(String id, String label) {
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException(label + " cannot be null or empty");
+        }
+        return id.trim().toLowerCase();
+    }
+
+    private static void validateBookingValues(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        if (startTime == null || endTime == null || !startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Start time must be strictly before end time");
+        }
+    }
+
+    private static User snapshot(User user) {
+        return user == null ? null : new User(user.getId(), user.getName(), user.getRole());
+    }
+
+    private static Room snapshot(Room room) {
+        return room == null ? null
+                : new Room(room.getId(), room.getType(), room.getCapacity(), room.getFeatures());
+    }
+
+    private static Booking snapshot(Booking booking) {
+        return booking == null ? null : new Booking(
+                booking.getId(), booking.getRoomId(), booking.getUserId(), booking.getDate(),
+                booking.getStartTime(), booking.getEndTime(), booking.getPurpose());
     }
 
     /**
-     * Returns the UndoRedoManager instance.
+     * Returns undo history for test diagnostics without exposing the manager.
      *
-     * @return UndoRedoManager.
+     * @return number of undo entries.
      */
-    public UndoRedoManager getUndoRedoManager() {
-        return undoRedoManager;
+    public int getUndoHistorySize() {
+        return undoRedoManager.getUndoCount();
     }
 }

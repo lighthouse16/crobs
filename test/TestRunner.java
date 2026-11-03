@@ -60,8 +60,12 @@ public class TestRunner {
                     passed++;
                     System.out.println("  PASS: " + testMethod.getName());
                 } catch (Exception e) {
-                    failed++;
                     Throwable cause = (e.getCause() != null) ? e.getCause() : e;
+                    if (cause instanceof org.opentest4j.TestAbortedException) {
+                        System.out.println("  SKIP: " + testMethod.getName() + " (" + cause.getMessage() + ")");
+                        continue;
+                    }
+                    failed++;
                     System.out.println("  FAIL: " + testMethod.getName() + " -> " + cause);
                     cause.printStackTrace(System.out);
                     failureMessages.add(clazz.getSimpleName() + "." + testMethod.getName() + ": " + cause.getMessage());

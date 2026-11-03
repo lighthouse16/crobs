@@ -238,10 +238,6 @@ public class GuiController {
         String cleanId = targetUserId.trim();
         logger.logCommand("changeRole " + cleanId + " " + newRole.name());
         model.changeRole(cleanId, newRole);
-        User u = knownUsers.get(cleanId.toLowerCase());
-        if (u != null) {
-            u.setRole(newRole);
-        }
         notifyListeners();
     }
 
@@ -268,7 +264,7 @@ public class GuiController {
      * @throws CrobsException on failure.
      */
     public Room addRoom(RoomType roomType, int capacity, Set<String> features) throws CrobsException {
-        String featStr = (features != null && !features.isEmpty()) ? String.join(",", features) : "";
+        String featStr = (features != null && !features.isEmpty()) ? String.join(",", features) : "-";
         logger.logCommand("addRoom " + roomType.name() + " " + capacity + " " + featStr);
         Room room = model.addRoom(roomType, capacity, features);
         notifyListeners();
@@ -459,7 +455,7 @@ public class GuiController {
      */
     public List<Room> search(LocalDate date, LocalTime startTime, LocalTime endTime,
                              int minCapacity, Set<String> features) {
-        String featStr = (features != null && !features.isEmpty()) ? String.join(",", features) : "";
+        String featStr = (features != null && !features.isEmpty()) ? String.join(",", features) : "-";
         String cmd = String.format("search %s %s %s %d %s",
                 date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), minCapacity, featStr);
         logger.logCommand(cmd);
@@ -530,10 +526,6 @@ public class GuiController {
 
     public void changeRoleQuiet(String userId, UserRole newRole) throws CrobsException {
         model.changeRole(userId.trim().toLowerCase(), newRole);
-        User u = knownUsers.get(userId.trim().toLowerCase());
-        if (u != null) {
-            u.setRole(newRole);
-        }
         notifyListeners();
     }
 

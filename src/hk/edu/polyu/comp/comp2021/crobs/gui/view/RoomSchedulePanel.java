@@ -303,9 +303,9 @@ public class RoomSchedulePanel extends JPanel {
                 // REQ14 Privacy check
                 boolean isOwner = (currentUser != null && b.getUserId().equalsIgnoreCase(currentUser.getId()));
                 String displayUser = (isAdmin || isOwner) ? b.getUserId() : "(hidden)";
-                String descText = (isAdmin || isOwner)
-                        ? (b.getPurpose().isEmpty() ? displayUser : (b.getPurpose().replace("_", " ") + " · " + displayUser))
-                        : "Reserved";
+                String purpose = b.getPurpose().isEmpty()
+                        ? "Reserved" : b.getPurpose().replace("_", " ");
+                String descText = purpose + " · " + displayUser;
 
                 JLabel descLabel = new JLabel(descText);
                 descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));

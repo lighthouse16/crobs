@@ -37,6 +37,40 @@ public class UndoRedoTest {
     }
 
     @Test
+    void testUndoRedoRequireSameLoggedInActor() throws CrobsException {
+        crobs.addUser("Alice");
+        crobs.logout();
+
+        assertThrows(CrobsException.class, () -> crobs.undo());
+        assertThrows(CrobsException.class, () -> crobs.redo());
+        assertDoesNotThrow(() -> crobs.login("u2"));
+
+        assertThrows(CrobsException.class, () -> crobs.undo());
+        assertFalse(crobs.redo());
+
+        crobs.login("u1");
+        assertTrue(crobs.undo());
+        assertThrows(CrobsException.class, () -> crobs.login("u2"));
+    }
+
+    @Test
+    void testRoleChangeHistoryCannotBeUsedByTargetUser() throws CrobsException {
+        User user = crobs.addUser("Target");
+        crobs.changeRole(user.getId(), UserRole.ADMIN);
+        crobs.login(user.getId());
+
+        assertThrows(CrobsException.class, () -> crobs.undo());
+        assertEquals(UserRole.ADMIN, crobs.getCurrentUser().getRole());
+
+        crobs.login("u1");
+        assertTrue(crobs.undo());
+        assertEquals(UserRole.REGULAR,
+                crobs.listAllUsers().stream()
+                        .filter(u -> u.getId().equals(user.getId()))
+                        .findFirst().get().getRole());
+    }
+
+    @Test
     void testEmptyUndoRedo() throws CrobsException {
         assertFalse(crobs.canUndo());
         assertFalse(crobs.canRedo());
@@ -98,18 +132,18 @@ public class UndoRedoTest {
     @Test
     void testChangeRoleUndoRedo() throws CrobsException {
         User u2 = crobs.addUser("Charlie");
-        assertEquals(UserRole.REGULAR, u2.getRole());
+        assertEquals(UserRole.REGULAR, crobs.listAllUsers().stream().filter(u -> u.getId().equals(u2.getId())).findFirst().get().getRole());
 
         crobs.changeRole("u2", UserRole.ADMIN);
-        assertEquals(UserRole.ADMIN, u2.getRole());
+        assertEquals(UserRole.ADMIN, crobs.listAllUsers().stream().filter(u -> u.getId().equals(u2.getId())).findFirst().get().getRole());
 
         // Undo -> back to REGULAR
         assertTrue(crobs.undo());
-        assertEquals(UserRole.REGULAR, u2.getRole());
+        assertEquals(UserRole.REGULAR, crobs.listAllUsers().stream().filter(u -> u.getId().equals(u2.getId())).findFirst().get().getRole());
 
         // Redo -> back to ADMIN
         assertTrue(crobs.redo());
-        assertEquals(UserRole.ADMIN, u2.getRole());
+        assertEquals(UserRole.ADMIN, crobs.listAllUsers().stream().filter(u -> u.getId().equals(u2.getId())).findFirst().get().getRole());
     }
 
     @Test
@@ -139,33 +173,33 @@ public class UndoRedoTest {
 
         // Modify capacity
         crobs.modifyRoom(r1.getId(), "capacity", "80");
-        assertEquals(80, r1.getCapacity());
+        assertEquals(80, crobs.listRoom(r1.getId()).getCapacity());
 
         assertTrue(crobs.undo());
-        assertEquals(40, r1.getCapacity());
+        assertEquals(40, crobs.listRoom(r1.getId()).getCapacity());
 
         assertTrue(crobs.redo());
-        assertEquals(80, r1.getCapacity());
+        assertEquals(80, crobs.listRoom(r1.getId()).getCapacity());
 
         // Modify type
         crobs.modifyRoom(r1.getId(), "type", "computerLab");
-        assertEquals(RoomType.computerLab, r1.getType());
+        assertEquals(RoomType.computerLab, crobs.listRoom(r1.getId()).getType());
 
         assertTrue(crobs.undo());
-        assertEquals(RoomType.seminarRoom, r1.getType());
+        assertEquals(RoomType.seminarRoom, crobs.listRoom(r1.getId()).getType());
 
         assertTrue(crobs.redo());
-        assertEquals(RoomType.computerLab, r1.getType());
+        assertEquals(RoomType.computerLab, crobs.listRoom(r1.getId()).getType());
 
         // Modify features
         crobs.modifyRoom(r1.getId(), "features", "Whiteboard,WiFi");
-        assertEquals(2, r1.getFeatures().size());
+        assertEquals(2, crobs.listRoom(r1.getId()).getFeatures().size());
 
         assertTrue(crobs.undo());
-        assertEquals(0, r1.getFeatures().size());
+        assertEquals(0, crobs.listRoom(r1.getId()).getFeatures().size());
 
         assertTrue(crobs.redo());
-        assertEquals(2, r1.getFeatures().size());
+        assertEquals(2, crobs.listRoom(r1.getId()).getFeatures().size());
     }
 
     @Test
@@ -368,21 +402,49 @@ public class UndoRedoTest {
     }
 
     @Test
-    void testUndoRedoManagerDirectCoverage() throws CrobsException {
-        UndoRedoManager manager = crobs.getUndoRedoManager();
-        assertNotNull(manager);
+    void testApplicationCliAcceptsEmptyFeatureSentinel() throws Exception {
+        java.io.File tempTxt = java.io.File.createTempFile("crobs_empty_features", ".txt");
+        java.io.File tempHtml = java.io.File.createTempFile("crobs_empty_features", ".html");
+        tempTxt.deleteOnExit();
+        tempHtml.deleteOnExit();
 
+        String simulatedInput = String.join(System.lineSeparator(),
+                "login u1",
+                "addRoom meetingRoom 10 -",
+                "search 2026-11-10 09:00 10:00 1 -",
+                "quit");
+
+        java.io.InputStream originalIn = System.in;
+        java.io.PrintStream originalOut = System.out;
+        try {
+            System.setIn(new java.io.ByteArrayInputStream(
+                    simulatedInput.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            java.io.ByteArrayOutputStream outCaptor = new java.io.ByteArrayOutputStream();
+            System.setOut(new java.io.PrintStream(outCaptor, true, "UTF-8"));
+
+            hk.edu.polyu.comp.comp2021.crobs.Application app =
+                    new hk.edu.polyu.comp.comp2021.crobs.Application(
+                            tempHtml.getAbsolutePath(), tempTxt.getAbsolutePath());
+            app.run();
+
+            String output = outCaptor.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+            assertTrue(output.contains("Room created: r1"));
+            assertTrue(output.contains("Available Rooms (1):"));
+            assertTrue(app.getCrobs().listRoom("r1").getFeatures().isEmpty());
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
+    }
+
+    @Test
+    void testUndoRedoHistoryDiagnostics() throws CrobsException {
+        assertEquals(0, crobs.getUndoHistorySize());
         crobs.addUser("TestUser");
-        assertNotNull(manager.peekUndo());
-        assertNotNull(manager.peekUndo().getDescription());
-        assertNull(manager.peekRedo());
+        assertEquals(1, crobs.getUndoHistorySize());
 
-        manager.undo();
-        assertNotNull(manager.peekRedo());
-        assertNotNull(manager.peekRedo().getDescription());
-
-        manager.clear();
-        assertFalse(manager.canUndo());
-        assertFalse(manager.canRedo());
+        crobs.undo();
+        assertEquals(0, crobs.getUndoHistorySize());
+        assertTrue(crobs.canRedo());
     }
 }

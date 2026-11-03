@@ -172,6 +172,33 @@ public class Booking {
     }
 
     /**
+     * Atomically updates all mutable booking fields after validating every value.
+     *
+     * @param roomId   new room ID.
+     * @param date     new reservation date.
+     * @param startTime new start time.
+     * @param endTime   new end time.
+     * @param purpose   new purpose.
+     */
+    public void update(String roomId, LocalDate date, LocalTime startTime,
+                       LocalTime endTime, String purpose) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Room ID cannot be null or empty");
+        }
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        if (startTime == null || endTime == null || !startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Start time must be strictly before end time");
+        }
+        this.roomId = roomId.trim();
+        this.date = date;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.purpose = (purpose != null) ? purpose.trim() : "";
+    }
+
+    /**
      * Checks if this booking conflicts with another room reservation.
      * Two bookings conflict if they refer to the same room on the same date and their time intervals overlap.
      *

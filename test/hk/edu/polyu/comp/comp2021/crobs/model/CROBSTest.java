@@ -44,7 +44,7 @@ class CROBSTest {
 
         // Change role to Admin
         crobs.changeRole(user1.getId(), UserRole.ADMIN);
-        assertEquals(UserRole.ADMIN, user1.getRole());
+        assertEquals(UserRole.ADMIN, crobs.listAllUsers().stream().filter(u -> u.getId().equals(user1.getId())).findFirst().get().getRole());
 
         // Logout and login as Alice
         crobs.logout();
@@ -77,14 +77,14 @@ class CROBSTest {
 
         // Modify room
         crobs.modifyRoom(room.getId(), "capacity", "120");
-        assertEquals(120, room.getCapacity());
+        assertEquals(120, crobs.listRoom(room.getId()).getCapacity());
 
         crobs.modifyRoom(room.getId(), "type", "seminarRoom");
-        assertEquals(RoomType.seminarRoom, room.getType());
+        assertEquals(RoomType.seminarRoom, crobs.listRoom(room.getId()).getType());
 
         crobs.modifyRoom(room.getId(), "features", "whiteboard,wifi");
-        assertTrue(room.getFeatures().contains("whiteboard"));
-        assertFalse(room.getFeatures().contains("projector"));
+        assertTrue(crobs.listRoom(room.getId()).getFeatures().contains("whiteboard"));
+        assertFalse(crobs.listRoom(room.getId()).getFeatures().contains("projector"));
 
         // List room
         Room fetched = crobs.listRoom(room.getId());
@@ -126,7 +126,7 @@ class CROBSTest {
 
         // Modify booking
         crobs.modifyBooking(booking.getId(), room.getId(), date, LocalTime.of(8, 0), LocalTime.of(10, 0), "Moved earlier");
-        assertEquals(LocalTime.of(8, 0), booking.getStartTime());
+        assertEquals(LocalTime.of(8, 0), crobs.listBookings().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getStartTime());
 
         // Delete booking
         crobs.deleteBooking(booking.getId());
@@ -179,6 +179,63 @@ class CROBSTest {
         Booking bB = new Booking("b10", "r2", "u2", d, t1, t2, "B");
         assertEquals(bA, bB);
         assertEquals(bA.hashCode(), bB.hashCode());
+    }
+
+    @Test
+    void testModifyBookingFailureIsAtomic() throws Exception {
+        Room originalRoom = crobs.addRoom(RoomType.seminarRoom, 30, Collections.emptySet());
+        Room otherRoom = crobs.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate originalDate = LocalDate.now().plusDays(1);
+        Booking booking = crobs.book(originalRoom.getId(), originalDate,
+                LocalTime.of(10, 0), LocalTime.of(11, 0), "Original");
+        boolean redoAvailableBefore = crobs.canRedo();
+
+        assertThrows(IllegalArgumentException.class, () -> crobs.modifyBooking(
+                booking.getId(), otherRoom.getId(), originalDate.plusDays(1),
+                LocalTime.of(12, 0), LocalTime.of(11, 0), "Invalid"));
+
+        Booking unchanged = crobs.listBookings().get(0);
+        assertEquals(originalRoom.getId(), unchanged.getRoomId());
+        assertEquals(originalDate, unchanged.getDate());
+        assertEquals(LocalTime.of(10, 0), unchanged.getStartTime());
+        assertEquals(LocalTime.of(11, 0), unchanged.getEndTime());
+        assertEquals("Original", unchanged.getPurpose());
+        assertEquals(redoAvailableBefore, crobs.canRedo());
+    }
+
+    @Test
+    void testRoomIdNormalizationPreventsDuplicateBookings() throws Exception {
+        Room room = crobs.addRoom(RoomType.seminarRoom, 30, Collections.emptySet());
+        LocalDate date = LocalDate.now().plusDays(1);
+        crobs.book(room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 0), "First");
+
+        assertThrows(CrobsException.class, () -> crobs.book(
+                "  " + room.getId().toUpperCase() + "  ", date,
+                LocalTime.of(10, 30), LocalTime.of(11, 30), "Overlap"));
+        assertEquals(room.getId(), crobs.listBookings().get(0).getRoomId());
+    }
+
+    @Test
+    void testReturnedModelObjectsCannotMutateInternalState() throws Exception {
+        User user = crobs.addUser("ReadOnlyUser");
+        Room room = crobs.addRoom(RoomType.seminarRoom, 30, Collections.singleton("wifi"));
+        Booking booking = crobs.book(room.getId(), LocalDate.now().plusDays(1),
+                LocalTime.of(10, 0), LocalTime.of(11, 0), "ReadOnlyBooking");
+
+        User currentUserSnapshot = crobs.getCurrentUser();
+        currentUserSnapshot.setRole(UserRole.REGULAR);
+        User listedUserSnapshot = crobs.listAllUsers().get(1);
+        listedUserSnapshot.setRole(UserRole.ADMIN);
+        Room roomSnapshot = crobs.listRoom(room.getId());
+        roomSnapshot.setCapacity(999);
+        Booking bookingSnapshot = crobs.listBookings().get(0);
+        bookingSnapshot.setPurpose("tampered");
+
+        assertEquals(UserRole.SUPERADMIN, crobs.getCurrentUser().getRole());
+        assertEquals(UserRole.REGULAR, crobs.listAllUsers().stream()
+                .filter(u -> u.getId().equals(user.getId())).findFirst().get().getRole());
+        assertEquals(30, crobs.listRoom(room.getId()).getCapacity());
+        assertEquals("ReadOnlyBooking", crobs.listBookings().get(0).getPurpose());
     }
 
     @Test
