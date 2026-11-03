@@ -11,7 +11,7 @@ import java.time.LocalTime;
  */
 public class ModifyBookingCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final String bookingId;
 
     private final String oldRoomId;
@@ -29,7 +29,7 @@ public class ModifyBookingCommand implements CrobsCommand {
     /**
      * Constructs a command capturing state changes of a modified booking.
      *
-     * @param crobs        CROBS model.
+     * @param access       internal model mutation access.
      * @param bookingId    booking ID.
      * @param oldRoomId    room ID prior to modification.
      * @param oldDate      date prior to modification.
@@ -42,10 +42,10 @@ public class ModifyBookingCommand implements CrobsCommand {
      * @param newEndTime   end time after modification.
      * @param newPurpose   purpose after modification.
      */
-    public ModifyBookingCommand(CROBS crobs, String bookingId,
+    public ModifyBookingCommand(CROBS.MutationAccess access, String bookingId,
                                 String oldRoomId, LocalDate oldDate, LocalTime oldStartTime, LocalTime oldEndTime, String oldPurpose,
                                 String newRoomId, LocalDate newDate, LocalTime newStartTime, LocalTime newEndTime, String newPurpose) {
-        this.crobs = crobs;
+        this.access = access;
         this.bookingId = bookingId;
         this.oldRoomId = oldRoomId;
         this.oldDate = oldDate;
@@ -66,12 +66,12 @@ public class ModifyBookingCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.modifyBookingDirect(bookingId, oldRoomId, oldDate, oldStartTime, oldEndTime, oldPurpose);
+        access.modifyBooking(bookingId, oldRoomId, oldDate, oldStartTime, oldEndTime, oldPurpose);
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.modifyBookingDirect(bookingId, newRoomId, newDate, newStartTime, newEndTime, newPurpose);
+        access.modifyBooking(bookingId, newRoomId, newDate, newStartTime, newEndTime, newPurpose);
     }
 
     @Override

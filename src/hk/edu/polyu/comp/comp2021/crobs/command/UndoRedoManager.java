@@ -15,8 +15,11 @@ public class UndoRedoManager {
 
     /** Required privilege for a recorded command. */
     public enum Permission {
+        /** Requires only an active authenticated session. */
         LOGGED_IN,
+        /** Requires admin privileges. */
         ADMIN,
+        /** Requires unique superadmin privileges. */
         SUPERADMIN
     }
 
@@ -29,6 +32,18 @@ public class UndoRedoManager {
             this.command = command;
             this.actorId = actorId;
             this.permission = permission;
+        }
+
+        public CrobsCommand getCommand() {
+            return command;
+        }
+
+        public String getActorId() {
+            return actorId;
+        }
+
+        public Permission getPermission() {
+            return permission;
         }
     }
 
@@ -64,7 +79,7 @@ public class UndoRedoManager {
         }
         HistoryEntry entry = undoStack.peek();
         authorize(entry, actorId, role);
-        entry.command.undo();
+        entry.getCommand().undo();
         undoStack.pop();
         redoStack.push(entry);
         return true;
@@ -84,32 +99,52 @@ public class UndoRedoManager {
         }
         HistoryEntry entry = redoStack.peek();
         authorize(entry, actorId, role);
-        entry.command.redo();
+        entry.getCommand().redo();
         redoStack.pop();
         undoStack.push(entry);
         return true;
     }
 
-    /** Returns whether the current user may undo the latest command. */
+    /**
+     * Returns whether the current user may undo the latest command.
+     *
+     * @param actorId current user ID.
+     * @param role    current user role.
+     * @return true if undo is authorized and available.
+     */
     public boolean canUndo(String actorId, UserRole role) {
         return !undoStack.isEmpty() && isAuthorized(undoStack.peek(), actorId, role);
     }
 
-    /** Returns whether the current user may redo the latest command. */
+    /**
+     * Returns whether the current user may redo the latest command.
+     *
+     * @param actorId current user ID.
+     * @param role    current user role.
+     * @return true if redo is authorized and available.
+     */
     public boolean canRedo(String actorId, UserRole role) {
         return !redoStack.isEmpty() && isAuthorized(redoStack.peek(), actorId, role);
     }
 
-    /** Returns the latest undo command, or null when empty. */
+    /**
+     * Returns the latest undo command, or null when empty.
+     *
+     * @return latest undo command or null.
+     */
     public CrobsCommand peekUndo() {
         HistoryEntry entry = undoStack.peek();
-        return entry == null ? null : entry.command;
+        return entry == null ? null : entry.getCommand();
     }
 
-    /** Returns the latest redo command, or null when empty. */
+    /**
+     * Returns the latest redo command, or null when empty.
+     *
+     * @return latest redo command or null.
+     */
     public CrobsCommand peekRedo() {
         HistoryEntry entry = redoStack.peek();
-        return entry == null ? null : entry.command;
+        return entry == null ? null : entry.getCommand();
     }
 
     /** Clears all history. */
@@ -118,19 +153,27 @@ public class UndoRedoManager {
         redoStack.clear();
     }
 
-    /** Returns undo history size. */
+    /**
+     * Returns undo history size.
+     *
+     * @return count of undoable commands.
+     */
     public int getUndoCount() {
         return undoStack.size();
     }
 
-    /** Returns redo history size. */
+    /**
+     * Returns redo history size.
+     *
+     * @return count of redoable commands.
+     */
     public int getRedoCount() {
         return redoStack.size();
     }
 
     private static void authorize(HistoryEntry entry, String actorId, UserRole role) throws CrobsException {
         if (!isAuthorized(entry, actorId, role)) {
-            if (actorId == null || !entry.actorId.equals(normalize(actorId))) {
+            if (actorId == null || !entry.getActorId().equals(normalize(actorId))) {
                 throw new CrobsException("Permission denied: Only the user who executed the command can undo or redo it.");
             }
             throw new CrobsException("Permission denied: Current role cannot undo or redo this command.");
@@ -139,10 +182,10 @@ public class UndoRedoManager {
 
     private static boolean isAuthorized(HistoryEntry entry, String actorId, UserRole role) {
         if (entry == null || actorId == null || role == null
-                || !entry.actorId.equals(normalize(actorId))) {
+                || !entry.getActorId().equals(normalize(actorId))) {
             return false;
         }
-        switch (entry.permission) {
+        switch (entry.getPermission()) {
             case SUPERADMIN:
                 return role.canChangeRoles();
             case ADMIN:

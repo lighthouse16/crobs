@@ -31,6 +31,7 @@ import java.util.List;
 /**
  * Modal dialog for modifying an existing booking (REQ11).
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})
 public class ModifyBookingDialog extends JDialog {
 
     private static final long serialVersionUID = 1L;

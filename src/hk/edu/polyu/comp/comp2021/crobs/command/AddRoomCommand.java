@@ -11,18 +11,18 @@ import java.util.Collections;
  */
 public class AddRoomCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final Room room;
 
     /**
      * Constructs a command for an addRoom operation.
      *
-     * @param crobs the CROBS model instance.
-     * @param room  the room created.
+     * @param access internal model mutation access.
+     * @param room   the room created.
      */
-    public AddRoomCommand(CROBS crobs, Room room) {
-        this.crobs = crobs;
-        this.room = room;
+    public AddRoomCommand(CROBS.MutationAccess access, Room room) {
+        this.access = access;
+        this.room = new Room(room.getId(), room.getType(), room.getCapacity(), room.getFeatures());
     }
 
     @Override
@@ -32,12 +32,12 @@ public class AddRoomCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.removeRoomDirect(room.getId());
+        access.removeRoom(room.getId());
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.restoreRoom(room, Collections.emptyList());
+        access.restoreRoom(room, Collections.emptyList());
     }
 
     @Override
@@ -51,6 +51,6 @@ public class AddRoomCommand implements CrobsCommand {
      * @return Room instance.
      */
     public Room getRoom() {
-        return room;
+        return new Room(room.getId(), room.getType(), room.getCapacity(), room.getFeatures());
     }
 }

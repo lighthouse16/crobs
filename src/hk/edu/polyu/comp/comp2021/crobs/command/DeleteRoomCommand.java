@@ -13,21 +13,28 @@ import java.util.List;
  */
 public class DeleteRoomCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final Room removedRoom;
     private final List<Booking> cancelledBookings;
 
     /**
      * Constructs a command for a deleteRoom operation.
      *
-     * @param crobs             the CROBS model instance.
+     * @param access            internal model mutation access.
      * @param removedRoom       the room being deleted.
      * @param cancelledBookings future bookings of the room that were cancelled.
      */
-    public DeleteRoomCommand(CROBS crobs, Room removedRoom, List<Booking> cancelledBookings) {
-        this.crobs = crobs;
-        this.removedRoom = removedRoom;
-        this.cancelledBookings = new ArrayList<>(cancelledBookings);
+    public DeleteRoomCommand(CROBS.MutationAccess access, Room removedRoom, List<Booking> cancelledBookings) {
+        this.access = access;
+        this.removedRoom = new Room(removedRoom.getId(), removedRoom.getType(),
+                removedRoom.getCapacity(), removedRoom.getFeatures());
+        this.cancelledBookings = new ArrayList<>();
+        if (cancelledBookings != null) {
+            for (Booking b : cancelledBookings) {
+                this.cancelledBookings.add(new Booking(b.getId(), b.getRoomId(), b.getUserId(),
+                        b.getDate(), b.getStartTime(), b.getEndTime(), b.getPurpose()));
+            }
+        }
     }
 
     @Override
@@ -37,14 +44,14 @@ public class DeleteRoomCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.restoreRoom(removedRoom, cancelledBookings);
+        access.restoreRoom(removedRoom, cancelledBookings);
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.removeRoomDirect(removedRoom.getId());
+        access.removeRoom(removedRoom.getId());
         for (Booking b : cancelledBookings) {
-            crobs.deleteBookingDirect(b.getId());
+            access.deleteBooking(b.getId());
         }
     }
 
@@ -59,7 +66,8 @@ public class DeleteRoomCommand implements CrobsCommand {
      * @return Room instance.
      */
     public Room getRemovedRoom() {
-        return removedRoom;
+        return new Room(removedRoom.getId(), removedRoom.getType(),
+                removedRoom.getCapacity(), removedRoom.getFeatures());
     }
 
     /**
@@ -68,6 +76,11 @@ public class DeleteRoomCommand implements CrobsCommand {
      * @return list of bookings.
      */
     public List<Booking> getCancelledBookings() {
-        return new ArrayList<>(cancelledBookings);
+        List<Booking> copy = new ArrayList<>();
+        for (Booking b : cancelledBookings) {
+            copy.add(new Booking(b.getId(), b.getRoomId(), b.getUserId(),
+                    b.getDate(), b.getStartTime(), b.getEndTime(), b.getPurpose()));
+        }
+        return copy;
     }
 }

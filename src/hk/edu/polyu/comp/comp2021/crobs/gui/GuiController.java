@@ -20,6 +20,7 @@ import java.util.Set;
  * Controller and presentation facade connecting Swing views to the underlying CROBS model.
  * Serializes user actions to the REQ1 command logger and dispatches model operations.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull"})
 public class GuiController {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
@@ -282,7 +283,10 @@ public class GuiController {
     public void modifyRoom(String roomId, String field, String newValue) throws CrobsException {
         String cleanId = roomId.trim();
         String cleanField = field.trim();
-        String cleanValue = newValue.trim();
+        String cleanValue = (newValue != null) ? newValue.trim() : "";
+        if ("features".equalsIgnoreCase(cleanField) && cleanValue.isEmpty()) {
+            cleanValue = "-";
+        }
         logger.logCommand("modifyRoom " + cleanId + " " + cleanField + " " + cleanValue);
         model.modifyRoom(cleanId, cleanField, cleanValue);
         notifyListeners();

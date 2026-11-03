@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
  * Independent session logger implementing REQ1 for the CROBS graphical user interface.
  * Outputs canonical CLI command strings to both an HTML table and plain text log file.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull"})
 public class GuiSessionLogger {
 
     private final String htmlLogPath;

@@ -223,15 +223,42 @@ public class CrobsGuiTest {
     @Test
     void testEmptyFeatureCommandsUseReplayableSentinel() throws IOException, CrobsException {
         controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.singleton("wifi"));
+        controller.modifyRoom(room.getId(), "features", "");
         controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
         controller.search(LocalDate.now().plusDays(1), LocalTime.of(9, 0),
                 LocalTime.of(10, 0), 1, Collections.emptySet());
         controller.closeLogger();
 
         String txtContent = new String(Files.readAllBytes(tempTxt.toPath()));
+        assertTrue(txtContent.contains("modifyRoom " + room.getId() + " features -"));
         assertTrue(txtContent.contains("addRoom meetingRoom 10 -"));
         assertTrue(txtContent.contains("search "));
         assertTrue(txtContent.contains(" 1 -"));
+        assertTrue(controller.getRoomQuiet(room.getId()).getFeatures().isEmpty());
+
+        java.io.InputStream originalIn = System.in;
+        java.io.PrintStream originalOut = System.out;
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        try {
+            System.setIn(new java.io.ByteArrayInputStream(
+                    txtContent.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            System.setOut(new java.io.PrintStream(output, true, "UTF-8"));
+            hk.edu.polyu.comp.comp2021.crobs.Application replay =
+                    new hk.edu.polyu.comp.comp2021.crobs.Application(null, null);
+            replay.run();
+            assertEquals(2, replay.getCrobs().listAllRooms().size());
+            assertTrue(replay.getCrobs().listRoom(room.getId()).getFeatures().isEmpty());
+            assertEquals(controller.getRoomQuiet(room.getId()).getCapacity(),
+                    replay.getCrobs().listRoom(room.getId()).getCapacity());
+            String replayOutput = output.toString("UTF-8");
+            assertFalse(replayOutput.contains("Error:"));
+            assertFalse(replayOutput.contains("Invalid Input:"));
+            assertTrue(replayOutput.contains("Available Rooms (2):"));
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
     }
 
     @Test

@@ -79,7 +79,7 @@ public class User {
             return false;
         }
         User user = (User) o;
-        return Objects.equals(this.id, user.id);
+        return Objects.equals(this.id, user.getId());
     }
 
     @Override

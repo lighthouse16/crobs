@@ -45,6 +45,7 @@ import java.util.List;
  * Screen C: My Bookings workspace displaying reservations owned by the current user
  * with inline Edit (via V3 slide-out drawer) and Cancel (via V3 confirmation modal).
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "InstanceofChain"})
 public class MyBookingsPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

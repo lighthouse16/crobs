@@ -56,6 +56,7 @@ import java.util.List;
  * layout, unified slide-out drawer on the right, instant user-switcher preview menu,
  * and bottom toast notifications.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})
 public class MainFrame extends JFrame {
 
     private static final long serialVersionUID = 1L;

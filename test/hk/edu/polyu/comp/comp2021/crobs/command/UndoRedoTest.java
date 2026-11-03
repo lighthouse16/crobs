@@ -410,7 +410,10 @@ public class UndoRedoTest {
 
         String simulatedInput = String.join(System.lineSeparator(),
                 "login u1",
-                "addRoom meetingRoom 10 -",
+                "addRoom meetingRoom 10 wifi",
+                "modifyRoom r1 features -",
+                "undo",
+                "modifyRoom r1 features",
                 "search 2026-11-10 09:00 10:00 1 -",
                 "quit");
 
@@ -431,6 +434,41 @@ public class UndoRedoTest {
             assertTrue(output.contains("Room created: r1"));
             assertTrue(output.contains("Available Rooms (1):"));
             assertTrue(app.getCrobs().listRoom("r1").getFeatures().isEmpty());
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
+    }
+
+    @Test
+    void testCliPreservesMultiwordNameAndPurpose() throws Exception {
+        String input = String.join(System.lineSeparator(),
+                "login u1",
+                "addUser Hai Dang",
+                "addUser SingleName",
+                "addRoom meetingRoom 10 -",
+                "book r1 2026-12-01 09:00 10:00 Group project meeting",
+                "modifyBooking b1 r1 2026-12-01 10:00 11:00 Updated group meeting",
+                "undo",
+                "redo",
+                "quit");
+        java.io.InputStream originalIn = System.in;
+        java.io.PrintStream originalOut = System.out;
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        try {
+            System.setIn(new java.io.ByteArrayInputStream(input.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            System.setOut(new java.io.PrintStream(output, true, "UTF-8"));
+            hk.edu.polyu.comp.comp2021.crobs.Application app =
+                    new hk.edu.polyu.comp.comp2021.crobs.Application(null, null);
+            app.run();
+            assertEquals("Hai Dang", app.getCrobs().listAllUsers().stream()
+                    .filter(u -> u.getId().equals("u2")).findFirst().get().getName());
+            assertEquals("SingleName", app.getCrobs().listAllUsers().stream()
+                    .filter(u -> u.getId().equals("u3")).findFirst().get().getName());
+            assertEquals("Updated group meeting", app.getCrobs().listBookings().get(0).getPurpose());
+            app.getCrobs().undo();
+            assertEquals("Group project meeting", app.getCrobs().listBookings().get(0).getPurpose());
+            assertFalse(output.toString("UTF-8").contains("Error:"));
         } finally {
             System.setIn(originalIn);
             System.setOut(originalOut);

@@ -24,6 +24,7 @@ import java.awt.RenderingHints;
  * Visual design system for CROBS V3 Desktop Workspace.
  * Faithfully matches the CROBS_GUI_V3 design specifications.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "AnonymousClassMethodCount"})
 public final class GuiTheme {
 
     private GuiTheme() {

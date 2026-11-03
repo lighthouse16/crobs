@@ -225,7 +225,7 @@ public class Booking {
             return false;
         }
         Booking booking = (Booking) o;
-        return Objects.equals(this.id, booking.id);
+        return Objects.equals(this.id, booking.getId());
     }
 
     @Override

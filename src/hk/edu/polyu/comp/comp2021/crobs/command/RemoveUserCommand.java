@@ -13,21 +13,27 @@ import java.util.List;
  */
 public class RemoveUserCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final User removedUser;
     private final List<Booking> cancelledBookings;
 
     /**
      * Constructs a command for a removeUser operation.
      *
-     * @param crobs             the CROBS model instance.
+     * @param access            internal model mutation access.
      * @param removedUser       the user being removed.
      * @param cancelledBookings list of bookings that were cancelled due to removing this user.
      */
-    public RemoveUserCommand(CROBS crobs, User removedUser, List<Booking> cancelledBookings) {
-        this.crobs = crobs;
-        this.removedUser = removedUser;
-        this.cancelledBookings = new ArrayList<>(cancelledBookings);
+    public RemoveUserCommand(CROBS.MutationAccess access, User removedUser, List<Booking> cancelledBookings) {
+        this.access = access;
+        this.removedUser = new User(removedUser.getId(), removedUser.getName(), removedUser.getRole());
+        this.cancelledBookings = new ArrayList<>();
+        if (cancelledBookings != null) {
+            for (Booking b : cancelledBookings) {
+                this.cancelledBookings.add(new Booking(b.getId(), b.getRoomId(), b.getUserId(),
+                        b.getDate(), b.getStartTime(), b.getEndTime(), b.getPurpose()));
+            }
+        }
     }
 
     @Override
@@ -37,14 +43,14 @@ public class RemoveUserCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.restoreUser(removedUser, cancelledBookings);
+        access.restoreUser(removedUser, cancelledBookings);
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.removeUserDirect(removedUser.getId());
+        access.removeUser(removedUser.getId());
         for (Booking b : cancelledBookings) {
-            crobs.deleteBookingDirect(b.getId());
+            access.deleteBooking(b.getId());
         }
     }
 
@@ -54,20 +60,25 @@ public class RemoveUserCommand implements CrobsCommand {
     }
 
     /**
-     * Gets the removed user.
+     * Gets a snapshot of the removed user.
      *
      * @return User instance.
      */
     public User getRemovedUser() {
-        return removedUser;
+        return new User(removedUser.getId(), removedUser.getName(), removedUser.getRole());
     }
 
     /**
-     * Gets the list of cancelled bookings associated with this user.
+     * Gets a copy of the cancelled bookings associated with this user.
      *
      * @return list of bookings.
      */
     public List<Booking> getCancelledBookings() {
-        return new ArrayList<>(cancelledBookings);
+        List<Booking> copy = new ArrayList<>();
+        for (Booking b : cancelledBookings) {
+            copy.add(new Booking(b.getId(), b.getRoomId(), b.getUserId(),
+                    b.getDate(), b.getStartTime(), b.getEndTime(), b.getPurpose()));
+        }
+        return copy;
     }
 }

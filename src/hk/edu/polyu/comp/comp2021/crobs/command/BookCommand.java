@@ -9,18 +9,19 @@ import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
  */
 public class BookCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final Booking booking;
 
     /**
      * Constructs a command for a book operation.
      *
-     * @param crobs   the CROBS model instance.
+     * @param access  internal model mutation access.
      * @param booking the booking created.
      */
-    public BookCommand(CROBS crobs, Booking booking) {
-        this.crobs = crobs;
-        this.booking = booking;
+    public BookCommand(CROBS.MutationAccess access, Booking booking) {
+        this.access = access;
+        this.booking = new Booking(booking.getId(), booking.getRoomId(), booking.getUserId(),
+                booking.getDate(), booking.getStartTime(), booking.getEndTime(), booking.getPurpose());
     }
 
     @Override
@@ -30,12 +31,12 @@ public class BookCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.deleteBookingDirect(booking.getId());
+        access.deleteBooking(booking.getId());
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.restoreBooking(booking);
+        access.restoreBooking(booking);
     }
 
     @Override
@@ -50,6 +51,7 @@ public class BookCommand implements CrobsCommand {
      * @return Booking instance.
      */
     public Booking getBooking() {
-        return booking;
+        return new Booking(booking.getId(), booking.getRoomId(), booking.getUserId(),
+                booking.getDate(), booking.getStartTime(), booking.getEndTime(), booking.getPurpose());
     }
 }

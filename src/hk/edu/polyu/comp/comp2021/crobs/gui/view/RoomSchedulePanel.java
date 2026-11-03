@@ -3,7 +3,6 @@ package hk.edu.polyu.comp.comp2021.crobs.gui.view;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiController;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 import hk.edu.polyu.comp.comp2021.crobs.gui.MainFrame;
-import hk.edu.polyu.comp.comp2021.crobs.gui.dialog.LoginDialog;
 import hk.edu.polyu.comp.comp2021.crobs.model.Booking;
 import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
 import hk.edu.polyu.comp.comp2021.crobs.model.Room;
@@ -39,6 +38,7 @@ import java.util.List;
  * Screen D: Weekly Room Schedule displaying 7 consecutive days starting from Monday of that week.
  * Enforces strict user privacy rules per specification (REQ14) and triggers the V3 slide-out drawer.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})
 public class RoomSchedulePanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

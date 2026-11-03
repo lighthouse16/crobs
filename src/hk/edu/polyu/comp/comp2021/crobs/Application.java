@@ -143,7 +143,7 @@ public class Application {
 
             case "addUser": // [REQ2]
                 if (tokens.length < 2) throw new IllegalArgumentException("Usage: addUser <name>");
-                User newUser = crobs.addUser(tokens[1]);
+                User newUser = crobs.addUser(String.join(" ", Arrays.copyOfRange(tokens, 1, tokens.length)));
                 System.out.println("User created: " + newUser.getId() + " (" + newUser.getName() + ")");
                 break;
 
@@ -156,7 +156,7 @@ public class Application {
             case "changeRole": // [REQ4]
                 if (tokens.length < 3) throw new IllegalArgumentException("Usage: changeRole <targetUserId> <newRole>");
                 UserRole role = UserRole.fromString(tokens[2]);
-                if (role == null) throw new IllegalArgumentException("Invalid role. Must be SUPERADMIN, ADMIN, or REGULAR.");
+                if (role == null) throw new IllegalArgumentException("Invalid role. Must be ADMIN or REGULAR.");
                 crobs.changeRole(tokens[1], role);
                 System.out.println("Role updated for user " + tokens[1] + " to " + role);
                 break;
@@ -172,8 +172,11 @@ public class Application {
                 break;
 
             case "modifyRoom": // [REQ8]
-                if (tokens.length < 4) throw new IllegalArgumentException("Usage: modifyRoom <roomID> <field> <newValue>");
-                crobs.modifyRoom(tokens[1], tokens[2], tokens[3]);
+                if (tokens.length < 3 || (!"features".equalsIgnoreCase(tokens[2]) && tokens.length < 4)) {
+                    throw new IllegalArgumentException("Usage: modifyRoom <roomID> <field> <newValue>");
+                }
+                String modValue = tokens.length >= 4 ? tokens[3] : "-";
+                crobs.modifyRoom(tokens[1], tokens[2], modValue);
                 System.out.println("Room " + tokens[1] + " modified.");
                 break;
 
@@ -188,7 +191,7 @@ public class Application {
                 LocalDate bDate = parseDate(tokens[2]);
                 LocalTime bStart = parseTime(tokens[3]);
                 LocalTime bEnd = parseTime(tokens[4]);
-                Booking b = crobs.book(tokens[1], bDate, bStart, bEnd, tokens[5]);
+                Booking b = crobs.book(tokens[1], bDate, bStart, bEnd, String.join(" ", Arrays.copyOfRange(tokens, 5, tokens.length)));
                 System.out.println("Booking created: " + b.getId());
                 break;
 
@@ -197,7 +200,7 @@ public class Application {
                 LocalDate mDate = parseDate(tokens[3]);
                 LocalTime mStart = parseTime(tokens[4]);
                 LocalTime mEnd = parseTime(tokens[5]);
-                crobs.modifyBooking(tokens[1], tokens[2], mDate, mStart, mEnd, tokens[6]);
+                crobs.modifyBooking(tokens[1], tokens[2], mDate, mStart, mEnd, String.join(" ", Arrays.copyOfRange(tokens, 6, tokens.length)));
                 System.out.println("Booking modified: " + tokens[1]);
                 break;
 
@@ -306,6 +309,11 @@ public class Application {
         }
     }
 
+    /**
+     * Returns the underlying CROBS model instance.
+     *
+     * @return the CROBS model.
+     */
     public CROBS getCrobs() {
         return crobs;
     }

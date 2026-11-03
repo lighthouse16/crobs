@@ -1,7 +1,7 @@
 # CROBS — Campus ROom Booking System
 
 [![Java](https://img.shields.io/badge/Java-8%20Language%20Level-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![JUnit 5](https://img.shields.io/badge/Tests-41%2F41%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
+[![JUnit 5](https://img.shields.io/badge/Tests-53%2F53%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
 [![GUI](https://img.shields.io/badge/GUI-Swing%20Desktop%20(BON1)-007ACC)]()
 [![Architecture](https://img.shields.io/badge/Architecture-MVC%20Pattern-orange)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -72,7 +72,7 @@ CROBS strictly follows the **Model-View-Controller (MVC)** pattern as mandated b
 | **REQ1** | `-html <path> -txt <path>` | System | Dual session logging to HTML table and plain TXT | ✅ Done |
 | **REQ2** | `addUser <name>` | Admin | Create a new regular user with auto-generated ID | ✅ Done |
 | **REQ3** | `removeUser <targetUserId>` | Admin | Remove regular user & cascade cancel their bookings | ✅ Done |
-| **REQ4** | `changeRole <targetUserId> <newRole>` | Superadmin | Update user role (`regularUser` / `adminUser`) | ✅ Done |
+| **REQ4** | `changeRole <targetUserId> <newRole>` | Superadmin | Update another user role (`REGULAR` / `ADMIN`); startup superadmin remains unique | ✅ Done |
 | **REQ5** | `login <userId>` | Anyone | Authenticate as existing user | ✅ Done |
 | **REQ6** | `logout` | Anyone | End current user session | ✅ Done |
 | **REQ7** | `addRoom <type> <capacity> <features>` | Admin | Create room (`lectureTheatre`, `computerLab`, etc.) | ✅ Done |
@@ -120,6 +120,9 @@ CROBS implements the classic **Command Design Pattern** to provide reversible op
   9. `deleteBooking` (restores previously cancelled reservation)
 - **Non-mutating Commands Excluded**: Session and query commands (`login`, `logout`, `search`, `schedule`, `listRoom`, `listAllRooms`, `listBookings`, `quit`) do not pollute undo history or invalidate redo branches.
 - **Dual-Stack Architecture**: Encapsulated in `UndoRedoManager` (`undoStack`, `redoStack`). Any new mutating operation automatically clears the redo stack.
+- **History policy**: One global linear history, not independent per-user stacks. Only the original actor, logged in with sufficient current privileges, may undo/redo the top entry. History is not skipped to reach another actor's entry. Login/logout and queries leave history intact; any new successful mutation clears redo. Failed validation or authorization leaves data and history unchanged.
+- **Empty features**: Use `-` for the empty set in `addRoom`, `modifyRoom <id> features -`, and `search`. GUI logs use this same representation. Omitting the last feature token is also accepted for CLI replay.
+- **Multiword CLI values**: `name` and `purpose` consume all remaining tokens: `addUser Hai Dang`, `book r1 2026-12-01 09:00 10:00 Group project meeting`. The same applies to `modifyBooking`; repeated whitespace becomes one space, quotes are literal characters. Existing one-token and underscore values remain supported.
 - **Dual Interface Integration**:
   - **CLI**: `undo` and `redo` commands with canonical logging to both HTML and TXT.
   - **GUI**: Dedicated topbar buttons, global keybindings (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`), instant view refresh, and toast feedback.
@@ -193,12 +196,22 @@ test.bat
 ./test.sh
 ```
 
+### Local JAR verification
+
+`crobs.jar` and `crobs-gui.jar` are identical GUI-entry packages built from clean production classes only, with no test classes or test dependencies. Start either using `java -jar <file>`. Both also support CLI execution using `java -cp <file> hk.edu.polyu.comp.comp2021.crobs.Application`. Each exact local JAR passed the full 53-test desktop suite and direct CLI regression checks for unique superadmin, invalid search intervals, multiword values, and empty-feature undo/redo. This does not update any GitHub Release asset.
+
+### Verification status
+
+Desktop suite: 53 passed, 0 failed. Headless suite: 50 passed, 0 failed, 3 window tests skipped.
+
+Measured on 2026-11-03 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g`. Production source tree SHA-256 `000504573755dff1994db3ded6343398479fd0aa8d2946b788993c94030df4ce` (sorted relative source paths, NUL, exact bytes, NUL). JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` line coverage **509/515 = 98.83%**; `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
+
 ### Test Coverage Highlights
 - **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, and defensive snapshots.
 - **`CrobsGuiTest`**: Component lifecycle tests, drawer state transitions, schedule privacy masking, and session logger integration.
 - **`CrobsGuiEndToEndTest`**: Comprehensive 20-step end-to-end integration scenario validating real user workflows from superadmin bootstrap to room booking and session report generation.
 - **`UndoRedoTest`**: Exhaustive test suite for BON2 command pattern undo/redo across all 9 mutating operations, history clearing, cascade booking restoration, CLI integration, and GUI controller bindings.
-- **IntelliJ Code Inspection (`COMP2021_PROJECT.xml`)**: 0 errors against the official course code quality profile.
+- **IntelliJ Code Inspection (`COMP2021_PROJECT.xml`)**: Profile verified via headless IntelliJ IDEA 2026.1.3 (`inspect.bat`). **0 errors and 0 warnings** across all 31 enabled inspection tools in production source code (`src/`). Full 53/53 tests pass on JDK 25 LTS.
 
 ---
 

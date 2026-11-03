@@ -23,6 +23,7 @@ public class TestRunner {
 
         int passed = 0;
         int failed = 0;
+        int skipped = 0;
         List<String> failureMessages = new ArrayList<>();
 
         for (Class<?> clazz : testClasses) {
@@ -49,19 +50,22 @@ public class TestRunner {
                     Constructor<?> constructor = clazz.getDeclaredConstructor();
                     constructor.setAccessible(true);
                     Object instance = constructor.newInstance();
-
-                    for (Method b : beforeMethods) {
-                        b.invoke(instance);
-                    }
-                    testMethod.invoke(instance);
-                    for (Method a : afterMethods) {
-                        a.invoke(instance);
+                    try {
+                        for (Method b : beforeMethods) {
+                            b.invoke(instance);
+                        }
+                        testMethod.invoke(instance);
+                    } finally {
+                        for (Method a : afterMethods) {
+                            a.invoke(instance);
+                        }
                     }
                     passed++;
                     System.out.println("  PASS: " + testMethod.getName());
                 } catch (Exception e) {
                     Throwable cause = (e.getCause() != null) ? e.getCause() : e;
                     if (cause instanceof org.opentest4j.TestAbortedException) {
+                        skipped++;
                         System.out.println("  SKIP: " + testMethod.getName() + " (" + cause.getMessage() + ")");
                         continue;
                     }
@@ -74,7 +78,7 @@ public class TestRunner {
         }
 
         System.out.println("\n-------------------------------------------");
-        System.out.println("RESULTS: Total=" + (passed + failed) + ", Passed=" + passed + ", Failed=" + failed);
+        System.out.println("RESULTS: Total=" + (passed + failed + skipped) + ", Passed=" + passed + ", Failed=" + failed + ", Skipped=" + skipped);
         if (failed > 0) {
             System.exit(1);
         } else {

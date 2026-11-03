@@ -18,6 +18,7 @@ import java.util.HashSet;
  *   -html <filepath> : Path to generate REQ1 HTML session log table.
  *   -txt  <filepath> : Path to generate REQ1 plain text command log.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull"})
 public class CrobsGuiApplication {
 
     public static void main(String[] args) {

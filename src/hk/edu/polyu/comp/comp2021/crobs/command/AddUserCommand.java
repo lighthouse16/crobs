@@ -11,18 +11,18 @@ import java.util.Collections;
  */
 public class AddUserCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final User user;
 
     /**
      * Constructs a command for an executed addUser operation.
      *
-     * @param crobs the CROBS model instance.
-     * @param user  the user that was created.
+     * @param access internal model mutation access.
+     * @param user   the user that was created.
      */
-    public AddUserCommand(CROBS crobs, User user) {
-        this.crobs = crobs;
-        this.user = user;
+    public AddUserCommand(CROBS.MutationAccess access, User user) {
+        this.access = access;
+        this.user = new User(user.getId(), user.getName(), user.getRole());
     }
 
     @Override
@@ -33,12 +33,12 @@ public class AddUserCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.removeUserDirect(user.getId());
+        access.removeUser(user.getId());
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.restoreUser(user, Collections.emptyList());
+        access.restoreUser(user, Collections.emptyList());
     }
 
     @Override
@@ -47,11 +47,11 @@ public class AddUserCommand implements CrobsCommand {
     }
 
     /**
-     * Gets the user associated with this command.
+     * Gets a snapshot of the user associated with this command.
      *
      * @return User instance.
      */
     public User getUser() {
-        return user;
+        return new User(user.getId(), user.getName(), user.getRole());
     }
 }

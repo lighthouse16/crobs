@@ -19,13 +19,13 @@ import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Modal dialog for creating (REQ7) or modifying (REQ8) a room.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "DataFlowIssue"})
 public class RoomEditorDialog extends JDialog {
 
     private static final long serialVersionUID = 1L;

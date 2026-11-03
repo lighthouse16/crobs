@@ -159,7 +159,7 @@ public class Room {
             return false;
         }
         Room room = (Room) o;
-        return Objects.equals(this.id, room.id);
+        return Objects.equals(this.id, room.getId());
     }
 
     @Override

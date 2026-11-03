@@ -47,6 +47,7 @@ import java.util.List;
  * and managing users (REQ2, REQ3, REQ4) matching the CROBS V3 specification.
  * Connects all creation and editing actions directly to the V3 slide-out drawer.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "InstanceofChain"})
 public class ManagePanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

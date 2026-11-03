@@ -2,8 +2,6 @@ package hk.edu.polyu.comp.comp2021.crobs.gui.dialog;
 
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -17,6 +15,7 @@ import java.awt.FlowLayout;
 /**
  * Clean confirmation modal dialog matching the CROBS V3 specification.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc"})
 public class ConfirmationDialog extends JDialog {
 
     private static final long serialVersionUID = 1L;

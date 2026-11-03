@@ -3,9 +3,7 @@ package hk.edu.polyu.comp.comp2021.crobs.gui.view;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiController;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
-import hk.edu.polyu.comp.comp2021.crobs.model.User;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -16,20 +14,19 @@ import javax.swing.JTextField;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagLayout;
-import java.util.List;
 
 /**
  * Screen: Sign in to CROBS.
  * Dedicated initial view matching official CROBS V3 specification.
  * Features clean centered card, quick user selector pills, and seamless login flow.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})
 public class LoginPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

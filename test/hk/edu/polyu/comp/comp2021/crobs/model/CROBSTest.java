@@ -229,7 +229,8 @@ class CROBSTest {
         Room roomSnapshot = crobs.listRoom(room.getId());
         roomSnapshot.setCapacity(999);
         Booking bookingSnapshot = crobs.listBookings().get(0);
-        bookingSnapshot.setPurpose("tampered");
+        bookingSnapshot.update(room.getId(), LocalDate.now().plusDays(2),
+                LocalTime.of(10, 0), LocalTime.of(11, 0), "tampered");
 
         assertEquals(UserRole.SUPERADMIN, crobs.getCurrentUser().getRole());
         assertEquals(UserRole.REGULAR, crobs.listAllUsers().stream()
@@ -239,11 +240,278 @@ class CROBSTest {
     }
 
     @Test
+    void testUniqueSuperadminInvariant() throws Exception {
+        User alice = crobs.addUser("Alice");
+        assertThrows(CrobsException.class, () -> crobs.changeRole(alice.getId(), UserRole.SUPERADMIN));
+        assertThrows(CrobsException.class, () -> crobs.changeRole("u1", UserRole.REGULAR));
+        assertThrows(CrobsException.class, () -> crobs.changeRole("u1", UserRole.ADMIN));
+        assertEquals(UserRole.SUPERADMIN, crobs.getCurrentUser().getRole());
+        assertEquals(UserRole.REGULAR, crobs.listAllUsers().stream()
+                .filter(u -> u.getId().equals(alice.getId())).findFirst().get().getRole());
+    }
+
+    @Test
+    void testSearchRejectsInvalidTimeInterval() throws Exception {
+        crobs.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate date = LocalDate.now().plusDays(1);
+        assertThrows(IllegalArgumentException.class, () ->
+                crobs.search(date, LocalTime.of(12, 0), LocalTime.of(10, 0), 1, Collections.emptySet()));
+        assertThrows(IllegalArgumentException.class, () ->
+                crobs.search(date, LocalTime.of(10, 0), LocalTime.of(10, 0), 1, Collections.emptySet()));
+        assertThrows(IllegalArgumentException.class, () ->
+                crobs.search(null, LocalTime.of(10, 0), LocalTime.of(11, 0), 1, Collections.emptySet()));
+        assertThrows(IllegalArgumentException.class, () ->
+                crobs.search(date, null, LocalTime.of(11, 0), 1, Collections.emptySet()));
+        assertThrows(IllegalArgumentException.class, () ->
+                crobs.search(date, LocalTime.of(10, 0), null, 1, Collections.emptySet()));
+        CROBS empty = new CROBS();
+        assertThrows(IllegalArgumentException.class, () -> empty.search(
+                date, LocalTime.of(12, 0), LocalTime.of(10, 0), 1, Collections.emptySet()));
+    }
+
+    @Test
+    void testModifyRoomEmptyFeaturesSentinelAndUndoRedo() throws Exception {
+        Room room = crobs.addRoom(RoomType.seminarRoom, 20,
+                new HashSet<>(java.util.Arrays.asList("wifi", "projector")));
+        crobs.modifyRoom(room.getId(), "features", "-");
+        assertTrue(crobs.listRoom(room.getId()).getFeatures().isEmpty());
+
+        assertTrue(crobs.undo());
+        assertEquals(2, crobs.listRoom(room.getId()).getFeatures().size());
+
+        assertTrue(crobs.redo());
+        assertTrue(crobs.listRoom(room.getId()).getFeatures().isEmpty());
+    }
+
+    @Test
+    void testModelDoesNotExposeDirectOrRestoreMethods() {
+        for (java.lang.reflect.Method method : CROBS.class.getMethods()) {
+            String name = method.getName();
+            assertFalse(name.endsWith("Direct") || name.startsWith("restore"),
+                    "Unexpected public bypass method: " + name);
+        }
+        for (java.lang.reflect.Method method : CROBS.class.getMethods()) {
+            assertFalse(CROBS.MutationAccess.class.isAssignableFrom(method.getReturnType()),
+                    "Mutation capability must not escape through a public getter");
+            assertFalse(hk.edu.polyu.comp.comp2021.crobs.command.CrobsCommand.class
+                    .isAssignableFrom(method.getReturnType()), "Live commands must not escape");
+        }
+        for (java.lang.reflect.Field field : CROBS.class.getDeclaredFields()) {
+            if (CROBS.MutationAccess.class.isAssignableFrom(field.getType())) {
+                assertTrue(java.lang.reflect.Modifier.isPrivate(field.getModifiers()));
+                assertTrue(java.lang.reflect.Modifier.isFinal(field.getModifiers()));
+            }
+        }
+    }
+
+    @Test
     void testInvalidOperations() {
         assertThrows(IllegalArgumentException.class, () -> crobs.login(""));
         assertThrows(CrobsException.class, () -> crobs.login("non_existent_id"));
         assertThrows(IllegalArgumentException.class, () -> crobs.addUser("   "));
         assertThrows(CrobsException.class, () -> crobs.listRoom("invalid_room"));
+    }
+
+    @Test
+    void testUserAndRoleValidation() throws Exception {
+        // User validation & equality branches
+        User defaultRoleUser = new User("u99", "DefaultRole", null);
+        assertEquals(UserRole.REGULAR, defaultRoleUser.getRole());
+        assertEquals(defaultRoleUser, defaultRoleUser);
+        assertNotEquals(defaultRoleUser, "not-a-user");
+        assertTrue(defaultRoleUser.toString().contains("u99"));
+        assertThrows(IllegalArgumentException.class, () -> new User(null, "Name", UserRole.REGULAR));
+        assertThrows(IllegalArgumentException.class, () -> new User("u1", " ", UserRole.REGULAR));
+        assertThrows(IllegalArgumentException.class, () -> defaultRoleUser.setRole(null));
+
+        // UserRole and RoomType parsing branches
+        assertNull(UserRole.fromString(null));
+        assertNull(UserRole.fromString("unknownRole"));
+        assertEquals(UserRole.ADMIN, UserRole.fromString("admin"));
+        assertTrue(UserRole.SUPERADMIN.canManageRooms());
+        assertTrue(UserRole.SUPERADMIN.canManageUsers());
+        assertTrue(UserRole.SUPERADMIN.canChangeRoles());
+        assertTrue(UserRole.ADMIN.canManageRooms());
+        assertTrue(UserRole.ADMIN.canManageUsers());
+        assertFalse(UserRole.ADMIN.canChangeRoles());
+        assertFalse(UserRole.REGULAR.canManageRooms());
+        assertFalse(UserRole.REGULAR.canManageUsers());
+        assertFalse(UserRole.REGULAR.canChangeRoles());
+
+        assertNull(RoomType.fromString(null));
+        assertNull(RoomType.fromString("unknownType"));
+        assertEquals(RoomType.computerLab, RoomType.fromString("COMPUTERLAB"));
+
+    }
+
+    @Test
+    void testRoomValidationAndFeatureCopies() {
+        // Room validation & feature branches
+        Set<String> rawFeatures = new HashSet<>(java.util.Arrays.asList("wifi", " ", null));
+        Room roomEntity = new Room("r99", RoomType.meetingRoom, 10, rawFeatures);
+        assertEquals(roomEntity, roomEntity);
+        assertNotEquals(roomEntity, "not-a-room");
+        assertTrue(roomEntity.hasAllFeatures(null));
+        assertTrue(roomEntity.hasAllFeatures(Collections.emptySet()));
+        assertFalse(roomEntity.hasAllFeatures(Collections.singleton("projector")));
+        assertTrue(roomEntity.toString().contains("r99"));
+        roomEntity.setFeatures(null);
+        assertTrue(roomEntity.getFeatures().isEmpty());
+        roomEntity.setFeatures(new HashSet<>(java.util.Arrays.asList("audio", "", null)));
+        assertEquals(1, roomEntity.getFeatures().size());
+        assertThrows(IllegalArgumentException.class, () -> new Room("", RoomType.meetingRoom, 10, null));
+        assertThrows(IllegalArgumentException.class, () -> new Room("r1", null, 10, null));
+        assertThrows(IllegalArgumentException.class, () -> new Room("r1", RoomType.meetingRoom, 0, null));
+        assertThrows(IllegalArgumentException.class, () -> roomEntity.setType(null));
+        assertThrows(IllegalArgumentException.class, () -> roomEntity.setCapacity(0));
+
+    }
+
+    @Test
+    void testBookingValidationIsAtomic() {
+        LocalDate date = LocalDate.now().plusDays(1);
+        LocalTime t09 = LocalTime.of(9, 0);
+        LocalTime t10 = LocalTime.of(10, 0);
+        // Booking validation & equality branches
+        Booking bookingEntity = new Booking("b99", "r99", "u99", date, t09, t10, null);
+        assertEquals("", bookingEntity.getPurpose());
+        assertEquals(bookingEntity, bookingEntity);
+        assertNotEquals(bookingEntity, "not-a-booking");
+        assertFalse(bookingEntity.conflictsWith("otherRoom", date, t09, t10));
+        assertFalse(bookingEntity.conflictsWith("r99", date.plusDays(1), t09, t10));
+        assertTrue(bookingEntity.toString().contains("b99"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("", "r1", "u1", date, t09, t10, "p"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("b1", "", "u1", date, t09, t10, "p"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("b1", "r1", "", date, t09, t10, "p"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("b1", "r1", "u1", null, t09, t10, "p"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("b1", "r1", "u1", date, null, t10, "p"));
+        assertThrows(IllegalArgumentException.class, () -> new Booking("b1", "r1", "u1", date, t10, t09, "p"));
+
+        assertThrows(IllegalArgumentException.class, () -> bookingEntity.update(
+                "r2", date.plusDays(1), t10, t09, "invalid"));
+        assertEquals("r99", bookingEntity.getRoomId());
+        assertEquals(date, bookingEntity.getDate());
+        assertEquals(t09, bookingEntity.getStartTime());
+        assertEquals(t10, bookingEntity.getEndTime());
+        assertEquals("", bookingEntity.getPurpose());
+    }
+
+    @Test
+    void testBookingSettersValidateBeforeMutation() {
+        LocalDate date = LocalDate.now().plusDays(1);
+        LocalTime start = LocalTime.of(9, 0);
+        LocalTime end = LocalTime.of(10, 0);
+        Booking booking = new Booking("b1", "r1", "u1", date, start, end, "Original");
+        assertThrows(IllegalArgumentException.class, () -> booking.setRoomId(" "));
+        assertThrows(IllegalArgumentException.class, () -> booking.setDate(null));
+        assertThrows(IllegalArgumentException.class, () -> booking.setTimeInterval(null, end));
+        assertThrows(IllegalArgumentException.class, () -> booking.setTimeInterval(end, start));
+        assertEquals("r1", booking.getRoomId());
+        assertEquals(date, booking.getDate());
+        assertEquals(start, booking.getStartTime());
+        assertEquals(end, booking.getEndTime());
+        booking.setRoomId(" r2 ");
+        booking.setDate(date.plusDays(1));
+        booking.setTimeInterval(start.plusHours(1), end.plusHours(1));
+        booking.setPurpose(" Changed ");
+        assertEquals("r2", booking.getRoomId());
+        assertEquals(date.plusDays(1), booking.getDate());
+        assertEquals(start.plusHours(1), booking.getStartTime());
+        assertEquals(end.plusHours(1), booking.getEndTime());
+        assertEquals("Changed", booking.getPurpose());
+        booking.setPurpose(null);
+        assertEquals("", booking.getPurpose());
+    }
+
+    @Test
+    void testModelPermissionAndValidationBoundaries() throws Exception {
+        LocalDate date = LocalDate.now().plusDays(1);
+        LocalTime t09 = LocalTime.of(9, 0);
+        LocalTime t10 = LocalTime.of(10, 0);
+        // CROBS negative & boundary branches
+        User reg1 = crobs.addUser("RegOne");
+        Room r1 = crobs.addRoom(RoomType.seminarRoom, 25, Collections.singleton("wifi"));
+        Booking b1 = crobs.book(r1.getId(), date, t09, t10, "Slot1");
+        Booking b2 = crobs.book(r1.getId(), date, LocalTime.of(11, 0), LocalTime.of(12, 0), "Slot2");
+
+        assertThrows(IllegalArgumentException.class, () -> crobs.removeUser(" "));
+        assertThrows(CrobsException.class, () -> crobs.removeUser("u999"));
+        assertThrows(CrobsException.class, () -> crobs.removeUser("u1"));
+        assertThrows(IllegalArgumentException.class, () -> crobs.changeRole(null, UserRole.ADMIN));
+        assertThrows(CrobsException.class, () -> crobs.changeRole("u999", UserRole.ADMIN));
+
+        assertThrows(CrobsException.class, () -> crobs.modifyRoom(r1.getId(), "type", "badType"));
+        assertThrows(CrobsException.class, () -> crobs.modifyRoom(r1.getId(), "capacity", "notANumber"));
+        assertThrows(CrobsException.class, () -> crobs.modifyRoom(r1.getId(), "capacity", "0"));
+        assertThrows(CrobsException.class, () -> crobs.modifyRoom(r1.getId(), "unknownField", "val"));
+        assertThrows(IllegalArgumentException.class, () -> crobs.listRoom(" "));
+        assertThrows(IllegalArgumentException.class, () -> crobs.schedule(r1.getId(), null));
+        assertEquals(1, crobs.search(date.plusDays(2), t09, t10, 0, Collections.emptySet()).size());
+
+        // Modify booking conflict against another booking
+        assertThrows(CrobsException.class, () -> crobs.modifyBooking(
+                b2.getId(), r1.getId(), date, LocalTime.of(9, 30), LocalTime.of(10, 30), "Overlap"));
+
+        // Regular user permission boundaries
+        crobs.login(reg1.getId());
+        Booking regBooking = crobs.book(r1.getId(), date.plusDays(1), t09, t10, "RegSlot");
+        assertEquals(reg1.getId(), crobs.schedule(r1.getId(), date).stream()
+                .filter(b -> b.getId().equals(regBooking.getId())).findFirst().get().getUserId());
+        assertThrows(CrobsException.class, () -> crobs.addUser("Denied"));
+        assertThrows(CrobsException.class, () -> crobs.modifyBooking(b1.getId(), r1.getId(), date, t09, t10, "Denied"));
+        assertThrows(CrobsException.class, () -> crobs.deleteBooking(b1.getId()));
+        assertThrows(CrobsException.class, () -> crobs.deleteBooking("b999"));
+
+        // Logged-out boundaries
+        crobs.logout();
+        assertThrows(CrobsException.class, () -> crobs.logout());
+        assertThrows(CrobsException.class, () -> crobs.listBookings());
+    }
+
+    @Test
+    void testRejectedRoleChangesPreserveHistoryAndUniqueSuperadmin() throws Exception {
+        User user = crobs.addUser("Alice");
+        crobs.changeRole(user.getId(), UserRole.ADMIN);
+        crobs.undo();
+        int undoCount = crobs.getUndoHistorySize();
+        for (String id : new String[]{"u1", " U1 "}) {
+            for (UserRole role : UserRole.values()) {
+                assertThrows(CrobsException.class, () -> crobs.changeRole(id, role));
+            }
+        }
+        assertThrows(CrobsException.class, () -> crobs.changeRole(user.getId(), UserRole.SUPERADMIN));
+        assertEquals(undoCount, crobs.getUndoHistorySize());
+        assertTrue(crobs.canRedo());
+        crobs.redo();
+        assertEquals(1L, crobs.listAllUsers().stream()
+                .filter(u -> u.getRole() == UserRole.SUPERADMIN).count());
+        assertEquals(UserRole.SUPERADMIN, crobs.getCurrentUser().getRole());
+    }
+
+    @Test
+    void testRestoredRoomAndBookingSnapshotsSurviveCompleteReplay() throws Exception {
+        Room room = crobs.addRoom(RoomType.seminarRoom, 20, Collections.singleton("wifi"));
+        LocalDate date = LocalDate.now().plusDays(1);
+        Booking booking = crobs.book(room.getId(), date, LocalTime.of(9, 0), LocalTime.of(10, 0), "Original");
+        crobs.modifyRoom(room.getId(), "capacity", "40");
+        crobs.modifyBooking(booking.getId(), room.getId(), date,
+                LocalTime.of(11, 0), LocalTime.of(12, 0), "Changed");
+        crobs.deleteRoom(room.getId());
+        crobs.undo();
+        Room restored = crobs.listRoom(room.getId());
+        restored.setCapacity(999);
+        crobs.listBookings().get(0).update(room.getId(), date,
+                LocalTime.of(13, 0), LocalTime.of(14, 0), "Tampered");
+        assertEquals(40, crobs.listRoom(room.getId()).getCapacity());
+        assertEquals("Changed", crobs.listBookings().get(0).getPurpose());
+        for (int i = 0; i < 4; i++) assertTrue(crobs.undo());
+        assertTrue(crobs.listAllRooms().isEmpty());
+        for (int i = 0; i < 5; i++) assertTrue(crobs.redo());
+        assertTrue(crobs.listAllRooms().isEmpty());
+        assertTrue(crobs.listBookings().isEmpty());
+        assertTrue(crobs.undo());
+        assertEquals(40, crobs.listRoom(room.getId()).getCapacity());
+        assertEquals("Changed", crobs.listBookings().get(0).getPurpose());
     }
 
     /**

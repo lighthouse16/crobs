@@ -94,4 +94,4 @@ src/hk/edu/polyu/comp/comp2021/crobs/gui/
 
 ### 5. Automated Verification Results
 
-The complete 41-test suite passes, including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.
+The complete 53-test suite passes, including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.

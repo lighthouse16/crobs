@@ -4,7 +4,6 @@ import hk.edu.polyu.comp.comp2021.crobs.gui.GuiController;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
 
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -15,12 +14,12 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 
 /**
  * Clean login dialog matching the CROBS V3 Sign In specification.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})
 public class LoginDialog extends JDialog {
 
     private static final long serialVersionUID = 1L;

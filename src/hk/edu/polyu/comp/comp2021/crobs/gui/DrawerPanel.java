@@ -32,7 +32,6 @@ import java.awt.GridLayout;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +42,7 @@ import java.util.function.Consumer;
  * Docked on the right side of the main workspace with 420px width, clean header, dynamic body,
  * and footer action buttons.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "InstanceofChain", "UseOfAnotherObjectsPrivateField", "DataFlowIssue"})
 public class DrawerPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;

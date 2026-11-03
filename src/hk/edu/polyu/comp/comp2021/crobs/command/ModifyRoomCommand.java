@@ -8,7 +8,7 @@ import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
  */
 public class ModifyRoomCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final String roomId;
     private final String field;
     private final String oldValue;
@@ -17,14 +17,14 @@ public class ModifyRoomCommand implements CrobsCommand {
     /**
      * Constructs a command for a modifyRoom operation.
      *
-     * @param crobs    the CROBS model instance.
+     * @param access   internal model mutation access.
      * @param roomId   room ID being modified.
      * @param field    the field name ("type", "capacity", or "features").
      * @param oldValue the field value prior to modification.
      * @param newValue the field value after modification.
      */
-    public ModifyRoomCommand(CROBS crobs, String roomId, String field, String oldValue, String newValue) {
-        this.crobs = crobs;
+    public ModifyRoomCommand(CROBS.MutationAccess access, String roomId, String field, String oldValue, String newValue) {
+        this.access = access;
         this.roomId = roomId;
         this.field = field;
         this.oldValue = oldValue;
@@ -38,12 +38,12 @@ public class ModifyRoomCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.modifyRoomDirect(roomId, field, oldValue);
+        access.modifyRoom(roomId, field, oldValue);
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.modifyRoomDirect(roomId, field, newValue);
+        access.modifyRoom(roomId, field, newValue);
     }
 
     @Override

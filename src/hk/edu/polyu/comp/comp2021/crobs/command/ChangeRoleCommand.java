@@ -9,7 +9,7 @@ import hk.edu.polyu.comp.comp2021.crobs.model.UserRole;
  */
 public class ChangeRoleCommand implements CrobsCommand {
 
-    private final CROBS crobs;
+    private final CROBS.MutationAccess access;
     private final String targetUserId;
     private final UserRole oldRole;
     private final UserRole newRole;
@@ -17,13 +17,13 @@ public class ChangeRoleCommand implements CrobsCommand {
     /**
      * Constructs a command for a changeRole operation.
      *
-     * @param crobs        the CROBS model instance.
+     * @param access       internal model mutation access.
      * @param targetUserId user ID whose role is being changed.
      * @param oldRole      the role before the change.
      * @param newRole      the role after the change.
      */
-    public ChangeRoleCommand(CROBS crobs, String targetUserId, UserRole oldRole, UserRole newRole) {
-        this.crobs = crobs;
+    public ChangeRoleCommand(CROBS.MutationAccess access, String targetUserId, UserRole oldRole, UserRole newRole) {
+        this.access = access;
         this.targetUserId = targetUserId;
         this.oldRole = oldRole;
         this.newRole = newRole;
@@ -36,12 +36,12 @@ public class ChangeRoleCommand implements CrobsCommand {
 
     @Override
     public void undo() throws CrobsException {
-        crobs.changeRoleDirect(targetUserId, oldRole);
+        access.changeRole(targetUserId, oldRole);
     }
 
     @Override
     public void redo() throws CrobsException {
-        crobs.changeRoleDirect(targetUserId, newRole);
+        access.changeRole(targetUserId, newRole);
     }
 
     @Override

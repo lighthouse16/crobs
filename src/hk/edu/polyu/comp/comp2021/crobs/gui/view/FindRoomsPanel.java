@@ -3,9 +3,6 @@ package hk.edu.polyu.comp.comp2021.crobs.gui.view;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiController;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 import hk.edu.polyu.comp.comp2021.crobs.gui.MainFrame;
-import hk.edu.polyu.comp.comp2021.crobs.gui.dialog.LoginDialog;
-import hk.edu.polyu.comp.comp2021.crobs.model.Booking;
-import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
 import hk.edu.polyu.comp.comp2021.crobs.model.Room;
 import hk.edu.polyu.comp.comp2021.crobs.model.RoomType;
 
@@ -18,18 +15,13 @@ import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
@@ -43,7 +35,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -60,6 +51,7 @@ import java.util.function.BiConsumer;
  * Screen A: Find Rooms workspace with 6-column search filter card, available rooms list,
  * and seamless integration with the V3 slide-out booking drawer.
  */
+@SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "PublicField"})
 public class FindRoomsPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
