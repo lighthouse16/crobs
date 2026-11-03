@@ -9,25 +9,13 @@ Key accomplishments:
 - **Design Alignment**: Built strictly to the **CROBS V3 Full-width Desktop** workspace standard (`CROBS_GUI_V3.html`).
 - **Standard Java API Only**: Built 100% using Java SE JDK 25 standard library (`javax.swing.*`, `java.awt.*`). Zero third-party GUI dependencies.
 - **Strict Model Separation (MVC)**: The GUI communicates exclusively through `CROBS` public model APIs. No duplicate booking/availability logic, no reflection, no private state bypass.
-- **Zero Modifications to Existing Code**: All 9 original Java source and test files remain byte-for-byte identical.
+- **Integrated Model Evolution**: GUI, CLI, and model were evolved together to support both bonus features while preserving MVC boundaries.
 
 ---
 
-### 2. Baseline Source Integrity Verification
+### 2. Source Integration
 
-Every original Java file in the project was verified via SHA-256 checksums before and after implementation:
-
-| Original Source File | SHA-256 Hash | Status |
-|---|---|---|
-| `src/hk/edu/polyu/comp/comp2021/crobs/Application.java` | `F84D5D2E2B3650748EBE875073AF9D541C852B0A783D075C4AA52EAE0D056BBF` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/Booking.java` | `153A8D28774C925FEFAC3EA5B71FA6A4C44AE52C55744725864BDCB29F3E140C` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/CROBS.java` | `8D4C9B947C89CDE025B5BDB79727E21991B1E929621F0DA290634A238B41037F` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/CrobsException.java` | `4403C63F489418BD225E8C2DC1198E86E6CD0316C1A78ED594EB50A24276F2B9` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/Room.java` | `5A1A17367810867F2E7D86D2BA3F3E9486A212EE7DCFC55DA3F9024EBD14917E` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/RoomType.java` | `E3908FE255ADD0601E24C853AD71F34150BF4CFAF731C75B438B50287D358514` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/User.java` | `A5A0AE24B942CCED5FA76B2082D502B16D3FE15B39470C29F09D40C6DBD67D25` | Verified Unchanged |
-| `src/hk/edu/polyu/comp/comp2021/crobs/model/UserRole.java` | `63352834B19F61518B0CBA9602AC4F1160D8B7DBD1CD7D8E95384B763AA2CE85` | Verified Unchanged |
-| `test/hk/edu/polyu/comp/comp2021/crobs/model/CROBSTest.java` | `F7B93E75A23EF31BA47CBFD83678EA64FD31D85C99567F1F1BAB4B751F6445FE` | Verified Unchanged |
+BON1 and BON2 share the same domain model and command logging rules. The implementation keeps the model independent from Swing while allowing both CLI and GUI controllers to use the same validated operations.
 
 ---
 
@@ -106,8 +94,4 @@ src/hk/edu/polyu/comp/comp2021/crobs/gui/
 
 ### 5. Automated Verification Results
 
-All 17 tests passed:
-- `CROBSTest` (Model unit tests): 7 / 7 passed
-- `CrobsGuiTest` (GUI unit tests): 9 / 9 passed
-- `CrobsGuiEndToEndTest` (Full 20-step lifecycle): 1 / 1 passed
-- **Total**: 17 / 17 passed (100%)
+The complete 41-test suite passes, including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.

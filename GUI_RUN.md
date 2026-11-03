@@ -38,22 +38,23 @@ java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication -h
 
 ### 3. Run Test Suites
 
-The test suite runs both unit and end-to-end integration tests (17 total tests, 100% pass rate).
+The current suite contains 41 model, command-pattern, GUI, and end-to-end tests. All tests pass in the provided runner.
 
 ```bash
 java -cp "out;lib/*" TestRunner
 ```
 
-Included tests:
-1. `hk.edu.polyu.comp.comp2021.crobs.model.CROBSTest` (7 tests - Model)
-2. `hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiTest` (9 tests - GUI Components & Facade)
-3. `hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiEndToEndTest` (1 test - 20-step complete lifecycle)
+Included suites:
+1. `hk.edu.polyu.comp.comp2021.crobs.model.CROBSTest`
+2. `hk.edu.polyu.comp.comp2021.crobs.command.UndoRedoTest`
+3. `hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiTest`
+4. `hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiEndToEndTest`
 
 ---
 
 ### 4. Running the Original CLI Application
 
-The original CLI application remains 100% intact and untouched:
+The CLI and GUI remain separate presentation modes over the same model:
 
 ```bash
 java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.Application -html cli_session.html -txt cli_session.txt

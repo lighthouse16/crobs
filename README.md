@@ -1,7 +1,7 @@
 # CROBS — Campus ROom Booking System
 
-[![Java](https://img.shields.io/badge/Java-17%2B-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![JUnit 5](https://img.shields.io/badge/Tests-18%2F18%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
+[![Java](https://img.shields.io/badge/Java-8%20Language%20Level-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![JUnit 5](https://img.shields.io/badge/Tests-41%2F41%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
 [![GUI](https://img.shields.io/badge/GUI-Swing%20Desktop%20(BON1)-007ACC)]()
 [![Architecture](https://img.shields.io/badge/Architecture-MVC%20Pattern-orange)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -194,7 +194,7 @@ test.bat
 ```
 
 ### Test Coverage Highlights
-- **`CROBSTest`**: 100% coverage of domain model business logic, conflict detection, user privilege boundaries, cascading cancellations, and entity immutability.
+- **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, and defensive snapshots.
 - **`CrobsGuiTest`**: Component lifecycle tests, drawer state transitions, schedule privacy masking, and session logger integration.
 - **`CrobsGuiEndToEndTest`**: Comprehensive 20-step end-to-end integration scenario validating real user workflows from superadmin bootstrap to room booking and session report generation.
 - **`UndoRedoTest`**: Exhaustive test suite for BON2 command pattern undo/redo across all 9 mutating operations, history clearing, cascade booking restoration, CLI integration, and GUI controller bindings.
