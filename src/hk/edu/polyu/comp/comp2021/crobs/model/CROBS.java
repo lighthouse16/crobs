@@ -3,6 +3,7 @@ package hk.edu.polyu.comp.comp2021.crobs.model;
 import hk.edu.polyu.comp.comp2021.crobs.command.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -343,10 +344,12 @@ public class CROBS {
         checkAdminAccess();
         Room room = getRoomOrThrow(roomId);
 
+        LocalDateTime now = LocalDateTime.now();
         rooms.remove(room.getId().toLowerCase());
         List<Booking> futureBookings = new ArrayList<>();
         for (Booking b : bookings.values()) {
-            if (b.getRoomId().equalsIgnoreCase(room.getId()) && !b.getDate().isBefore(LocalDate.now())) {
+            if (b.getRoomId().equalsIgnoreCase(room.getId())
+                    && LocalDateTime.of(b.getDate(), b.getEndTime()).isAfter(now)) {
                 futureBookings.add(b);
             }
         }

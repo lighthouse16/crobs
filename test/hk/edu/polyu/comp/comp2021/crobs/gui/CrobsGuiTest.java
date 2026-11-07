@@ -475,4 +475,157 @@ public class CrobsGuiTest {
         LoginPanel demoLogin = new LoginPanel(demoCtrl, null);
         assertNotNull(demoLogin);
     }
+
+    private static Object componentField(Object panel, String name) {
+        try {
+            java.lang.reflect.Field f = panel.getClass().getDeclaredField(name);
+            f.setAccessible(true);
+            return f.get(panel);
+        } catch (ReflectiveOperationException ex) {
+            throw new AssertionError(ex);
+        }
+    }
+
+    @Test
+    void testRoomEditValidationBeforeMutating() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.singleton("wifi"));
+        int history = model.getUndoHistorySize();
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openEditRoom(room);
+            ((javax.swing.JComboBox<?>) componentField(drawer, "roomTypeCombo")).setSelectedItem(RoomType.computerLab);
+            ((javax.swing.JTextField) componentField(drawer, "roomCapField")).setText("0");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            assertTrue(((javax.swing.JLabel) componentField(drawer, "errorLabel")).getText().contains("positive"));
+        });
+        assertEquals(RoomType.meetingRoom, model.listRoom(room.getId()).getType());
+        assertEquals(10, model.listRoom(room.getId()).getCapacity());
+        assertEquals(history, model.getUndoHistorySize());
+    }
+
+    @Test
+    void testStrictCalendarDateOnBookingDrawer() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openBookFromSearch(room, LocalDate.of(2026, 2, 28),
+                    LocalTime.of(9, 0), LocalTime.of(10, 0));
+            ((javax.swing.JTextField) componentField(drawer, "dateField")).setText("2026-02-30");
+            ((javax.swing.JTextArea) componentField(drawer, "purposeArea")).setText("Project meeting");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            assertFalse(((javax.swing.JLabel) componentField(drawer, "errorLabel")).getText().trim().isEmpty());
+            ((javax.swing.JTextField) componentField(drawer, "dateField")).setText("2026-02-28");
+            ((javax.swing.JTextField) componentField(drawer, "startField")).setText("24:00");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            assertFalse(((javax.swing.JLabel) componentField(drawer, "errorLabel")).getText().trim().isEmpty());
+        });
+        assertTrue(controller.getBookingsQuiet().isEmpty());
+    }
+
+    @Test
+    void testMultilinePurposeLogAndCliReplay() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate date = LocalDate.of(2027, 1, 5);
+        Booking booking = controller.book(room.getId(), date, LocalTime.of(9, 0),
+                LocalTime.of(10, 0), "Project meeting\nDiscussion");
+        assertEquals("Project meeting Discussion", booking.getPurpose());
+        controller.modifyBooking(booking.getId(), room.getId(), date, LocalTime.of(9, 0),
+                LocalTime.of(10, 30), "Follow-up\r\nDecisions");
+        assertEquals("Follow-up Decisions", controller.getBookingsQuiet().get(0).getPurpose());
+        controller.closeLogger();
+        String log = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(4, log.trim().split("\\R").length);
+        assertTrue(log.contains("Project meeting Discussion"));
+        assertTrue(log.contains("Follow-up Decisions"));
+        InputStream originalIn = System.in;
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream capture = new ByteArrayOutputStream();
+        try {
+            System.setIn(new ByteArrayInputStream((log + "quit\n").getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(capture, true, "UTF-8"));
+            Application app = new Application(null, null);
+            app.run();
+            assertEquals("Follow-up Decisions", app.getCrobs().listBookings().get(0).getPurpose());
+            assertFalse(capture.toString("UTF-8").contains("Unknown command"));
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
+    }
+
+    @Test
+    void testInvalidSearchRangeShowsErrorAndInvalidDateRejected() throws Exception {
+        FindRoomsPanel panel = new FindRoomsPanel(controller, (r, d) -> {}, () -> {}, () -> {});
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            ((javax.swing.JComboBox<?>) componentField(panel, "startCombo")).setSelectedItem("12:00");
+            ((javax.swing.JComboBox<?>) componentField(panel, "endCombo")).setSelectedItem("10:00");
+            panel.executeSearch(true);
+            assertEquals("Invalid search interval",
+                    ((javax.swing.JLabel) componentField(panel, "resultsTitleLabel")).getText());
+            ((javax.swing.JComboBox<?>) componentField(panel, "dateCombo")).setSelectedItem("2026-02-30");
+            panel.executeSearch(true);
+            assertEquals("Invalid search input",
+                    ((javax.swing.JLabel) componentField(panel, "resultsTitleLabel")).getText());
+        });
+    }
+
+    @Test
+    void testUserOpensScheduleLoggedButPassiveRefreshQuiet() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        RoomSchedulePanel panel = new RoomSchedulePanel(controller, () -> {});
+        javax.swing.SwingUtilities.invokeAndWait(() ->
+                panel.loadScheduleForRoom(room.getId(), LocalDate.of(2027, 1, 5)));
+        String first = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(1, first.split("schedule " + room.getId() + " ", -1).length - 1);
+        controller.addUser("Passive refresh trigger");
+        String second = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(1, second.split("schedule " + room.getId() + " ", -1).length - 1);
+    }
+
+
+    @Test
+    void testInvalidEditBookingDateKeepsOriginalReservation() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate date = LocalDate.of(2027, 1, 5);
+        Booking booking = controller.book(room.getId(), date,
+                LocalTime.of(9, 0), LocalTime.of(10, 0), "Phase_1_review");
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        int historyBefore = model.getUndoHistorySize();
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openEditBooking(booking);
+            assertEquals("Phase_1_review",
+                    ((javax.swing.JTextArea) componentField(drawer, "purposeArea")).getText());
+            ((javax.swing.JComboBox<?>) componentField(drawer, "dateCombo"))
+                    .getEditor().setItem("2026-02-30");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            assertFalse(((javax.swing.JLabel) componentField(drawer, "errorLabel")).getText().trim().isEmpty());
+        });
+        assertEquals(date, controller.getBookingsQuiet().get(0).getDate());
+        assertEquals("Phase_1_review", controller.getBookingsQuiet().get(0).getPurpose());
+        assertEquals(historyBefore, model.getUndoHistorySize());
+    }
+
+    @Test
+    void testMultilinePurposeFromSwingDrawerIsNormalizedBeforeLogging() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openBookFromSearch(room, LocalDate.of(2027, 1, 5),
+                    LocalTime.of(9, 0), LocalTime.of(10, 0));
+            ((javax.swing.JTextArea) componentField(drawer, "purposeArea"))
+                    .setText("Project meeting\nDiscussion");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+        });
+        assertEquals("Project meeting Discussion", controller.getBookingsQuiet().get(0).getPurpose());
+        String log = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(3, log.trim().split("\\R").length);
+        assertTrue(log.contains("Project meeting Discussion"));
+    }
+
 }

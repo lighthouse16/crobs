@@ -191,7 +191,7 @@ public class RoomSchedulePanel extends JPanel {
         this.currentRoomId = roomId;
         // Align to Monday
         this.currentWeekStart = date.with(DayOfWeek.MONDAY);
-        reloadSchedule(false);
+        reloadSchedule(true);
     }
 
     private void reloadSchedule(boolean logCommand) {

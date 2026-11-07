@@ -370,7 +370,7 @@ public class GuiController {
                         LocalTime endTime, String purpose) throws CrobsException {
         String cleanRoom = roomId.trim();
         String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim() : "None";
+                ? purpose.trim().replaceAll("\\s+", " ") : "None";
         String cmd = String.format("book %s %s %s %s %s",
                 cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);
@@ -395,7 +395,7 @@ public class GuiController {
         String cleanId = bookingId.trim();
         String cleanRoom = roomId.trim();
         String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim() : "None";
+                ? purpose.trim().replaceAll("\\s+", " ") : "None";
         String cmd = String.format("modifyBooking %s %s %s %s %s %s",
                 cleanId, cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);

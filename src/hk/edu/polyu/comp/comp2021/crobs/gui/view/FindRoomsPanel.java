@@ -56,8 +56,8 @@ public class FindRoomsPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT);
     private static final DateTimeFormatter READABLE_DATE = DateTimeFormatter.ofPattern("EEE, d MMM yyyy");
 
     private final GuiController controller;
@@ -448,10 +448,19 @@ public class FindRoomsPanel extends JPanel {
         }
 
         List<Room> availableRooms;
-        if (logCommand) {
-            availableRooms = controller.search(date, start, end, capacity, selectedFeatures);
-        } else {
-            availableRooms = controller.searchQuiet(date, start, end, capacity, selectedFeatures);
+        try {
+            if (logCommand) {
+                availableRooms = controller.search(date, start, end, capacity, selectedFeatures);
+            } else {
+                availableRooms = controller.searchQuiet(date, start, end, capacity, selectedFeatures);
+            }
+        } catch (IllegalArgumentException ex) {
+            resultsTitleLabel.setText("Invalid search interval");
+            resultsSubtitleLabel.setText(ex.getMessage());
+            currentDisplayItems.clear();
+            tableModel.fireTableDataChanged();
+            resultsCardLayout.show(resultsCardContainer, CARD_EMPTY);
+            return;
         }
 
         currentDisplayItems.clear();

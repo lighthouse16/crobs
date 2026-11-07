@@ -57,8 +57,8 @@ public class DrawerPanel extends JPanel {
         CHANGE_ROLE
     }
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT);
     private static final DateTimeFormatter READABLE_DATE = DateTimeFormatter.ofPattern("EEE, d MMM yyyy");
 
     private final GuiController controller;
@@ -452,7 +452,7 @@ public class DrawerPanel extends JPanel {
         purposeArea.setLineWrap(true);
         purposeArea.setWrapStyleWord(true);
         purposeArea.setFont(GuiTheme.FONT_BODY);
-        purposeArea.setText(booking.getPurpose().replace("_", " "));
+        purposeArea.setText(booking.getPurpose());
         purposeArea.setBorder(new EmptyBorder(8, 10, 8, 10));
 
         JScrollPane pScroll = new JScrollPane(purposeArea);
@@ -671,6 +671,10 @@ public class DrawerPanel extends JPanel {
                     RoomType type = (RoomType) roomTypeCombo.getSelectedItem();
                     int cap = Integer.parseInt(roomCapField.getText().trim());
                     String featStr = roomFeaturesField.getText().trim();
+                    if (type == null || cap <= 0) {
+                        errorLabel.setText("Select a type and enter a positive capacity.");
+                        return;
+                    }
 
                     controller.modifyRoom(activeRoom.getId(), "type", type.name());
                     controller.modifyRoom(activeRoom.getId(), "capacity", String.valueOf(cap));

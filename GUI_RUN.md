@@ -45,7 +45,7 @@ java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication -h
 
 ### 3. Run Test Suites
 
-The current suite contains 59 model, command-pattern, GUI, and end-to-end tests (59 passed on desktop; 56 passed, 3 display tests skipped headless). All tests pass in the provided runner.
+The current suite contains 67 model, command-pattern, GUI, and end-to-end tests (67 passed on desktop; 64 passed, 3 display tests skipped headless). All tests pass in the provided runner.
 
 ```bash
 java -cp "out;lib/*" TestRunner

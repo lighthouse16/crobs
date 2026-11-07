@@ -203,20 +203,20 @@ test.bat
 
 ### Local JAR verification
 
-`crobs.jar` and `crobs-gui.jar` are identical GUI-entry packages built from clean production classes only, with no test classes or test dependencies. Start either using `java -jar <file>`. Both also support CLI execution using `java -cp <file> hk.edu.polyu.comp.comp2021.crobs.Application`. Each exact local JAR passed the full 59-test desktop suite and direct CLI regression checks for unique superadmin, invalid search intervals, multiword values, and empty-feature undo/redo. This does not update any GitHub Release asset.
+Local JAR files are optional build artifacts and are ignored by Git. Rebuild them after source changes; do not place stale binaries in the source submission. The public GitHub Release is separate from this source revision.
 
 ### Verification status
 
-Desktop suite: 59 passed, 0 failed. Headless suite: 56 passed, 0 failed, 3 window tests skipped.
+Desktop suite: 67 passed, 0 failed. Headless suite: 64 passed, 0 failed, 3 window tests skipped.
 
-Measured on 2026-11-07 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g` across verified commit `fc1d418`. JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` package-level line coverage **509/515 = 98.83%** (sum of individual class counters **512/518 = 98.84%**); `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
+Measured on 2026-11-07 using OpenJDK Temurin 25.0.4.1 with -source 8 -target 8 -g, on the local review-fix branch based on 4528407. JaCoCo 0.8.12 measured model package-level line coverage 511/517 = 98.84%, and Booking 66/68 = 97.06%. Test classes are excluded from the denominator; these are JaCoCo rather than IntelliJ grader measurements.
 
 ### Test Coverage Highlights
 - **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, defensive snapshots, `roomType` alias, self-aliasing feature copies, and unauthenticated schedule privacy.
 - **`CrobsGuiTest`**: Component lifecycle tests, drawer state transitions, schedule privacy masking, multiword string preservation, clean startup validation, and session logger integration.
 - **`CrobsGuiEndToEndTest`**: Comprehensive 20-step end-to-end integration scenario validating real user workflows from superadmin bootstrap to room booking and session report generation.
 - **`UndoRedoTest`**: Exhaustive test suite for BON2 command pattern undo/redo across all 9 mutating operations, history clearing, cascade booking restoration, CLI integration, and GUI controller bindings.
-- **IntelliJ Code Inspection (`COMP2021_PROJECT.xml`)**: The official `COMP2021_PROJECT.xml` inspection profile contains 31 enabled rules. Final inspection against the current source is pending verification due to active IDE session locking. Full 59/59 tests pass on JDK 25 LTS.
+- IntelliJ Code Inspection (COMP2021_PROJECT.xml): IntelliJ IDEA 2026.1.3 generated 26 XML reports on the review-fix source; zero production src findings matched the 31 enabled profile rules. Other disabled inspections reported findings. The official grader uses IDEA 2026.2.1.
 
 ---
 

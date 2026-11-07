@@ -630,4 +630,27 @@ class CROBSTest {
         System.out.println("\nAll Tests Executed: " + passed + " passed, " + failed + " failed.");
         if (failed > 0) System.exit(1);
     }
+
+    @Test
+    void testDeleteRoomPreservesCompletedSameDayBooking() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                LocalTime.now().isAfter(LocalTime.of(0, 2))
+                        && LocalTime.now().isBefore(LocalTime.of(23, 45)),
+                "Requires a completed early booking and an upcoming late booking");
+
+        Room room = crobs.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate today = LocalDate.now();
+        Booking completed = crobs.book(room.getId(), today,
+                LocalTime.of(0, 0), LocalTime.of(0, 1), "Completed meeting");
+        Booking upcoming = crobs.book(room.getId(), today,
+                LocalTime.of(23, 50), LocalTime.of(23, 59), "Upcoming meeting");
+
+        crobs.deleteRoom(room.getId());
+        assertTrue(crobs.listBookings().stream().anyMatch(b -> b.getId().equals(completed.getId())));
+        assertFalse(crobs.listBookings().stream().anyMatch(b -> b.getId().equals(upcoming.getId())));
+
+        assertTrue(crobs.undo());
+        assertTrue(crobs.listBookings().stream().anyMatch(b -> b.getId().equals(upcoming.getId())));
+    }
+
 }
