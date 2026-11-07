@@ -195,10 +195,10 @@ public class GuiController {
      * @throws CrobsException on authorization or validation failure.
      */
     public User addUser(String name) throws CrobsException {
-        if (name == null || name.trim().isEmpty()) {
+        String sanitizedName = normalizeWhitespace(name);
+        if (sanitizedName.isEmpty()) {
             throw new IllegalArgumentException("User name cannot be blank");
         }
-        String sanitizedName = name.trim();
         logger.logCommand("addUser " + sanitizedName);
         User user = model.addUser(sanitizedName);
         if (user != null) {
@@ -265,7 +265,7 @@ public class GuiController {
      * @throws CrobsException on failure.
      */
     public Room addRoom(RoomType roomType, int capacity, Set<String> features) throws CrobsException {
-        String featStr = (features != null && !features.isEmpty()) ? String.join(",", features) : "-";
+        String featStr = serializeFeatures(features);
         logger.logCommand("addRoom " + roomType.name() + " " + capacity + " " + featStr);
         Room room = model.addRoom(roomType, capacity, features);
         notifyListeners();
@@ -284,8 +284,8 @@ public class GuiController {
         String cleanId = roomId.trim();
         String cleanField = field.trim();
         String cleanValue = (newValue != null) ? newValue.trim() : "";
-        if ("features".equalsIgnoreCase(cleanField) && cleanValue.isEmpty()) {
-            cleanValue = "-";
+        if ("features".equalsIgnoreCase(cleanField)) {
+            cleanValue = normalizeFeatureArgument(cleanValue);
         }
         logger.logCommand("modifyRoom " + cleanId + " " + cleanField + " " + cleanValue);
         model.modifyRoom(cleanId, cleanField, cleanValue);
@@ -355,6 +355,57 @@ public class GuiController {
     // Booking Management (REQ10, REQ11, REQ12, REQ17)
     // ==========================================
 
+    private static final java.util.regex.Pattern FEATURE_WHITESPACE =
+            java.util.regex.Pattern.compile("(?U)\\s");
+
+    private static String normalizeWhitespace(String value) {
+        return value == null ? "" : value.replaceAll("(?U)\\s+", " ").trim();
+    }
+
+    private static String normalizePurpose(String purpose) {
+        String normalized = normalizeWhitespace(purpose);
+        return normalized.isEmpty() ? "None" : normalized;
+    }
+
+    private static void validateFeatureToken(String feature) {
+        if (feature.indexOf(',') >= 0 || FEATURE_WHITESPACE.matcher(feature).find()) {
+            throw new IllegalArgumentException(
+                    "Features must be comma-separated names without spaces or line breaks.");
+        }
+    }
+
+    private static String serializeFeatures(Set<String> features) {
+        List<String> tokens = new ArrayList<>();
+        if (features != null) {
+            for (String feature : features) {
+                if (feature == null) {
+                    continue;
+                }
+                String token = feature.trim();
+                if (!token.isEmpty() && !"-".equals(token)) {
+                    validateFeatureToken(token);
+                    tokens.add(token);
+                }
+            }
+        }
+        Collections.sort(tokens);
+        return tokens.isEmpty() ? "-" : String.join(",", tokens);
+    }
+
+    static String normalizeFeatureArgument(String features) {
+        List<String> tokens = new ArrayList<>();
+        if (features != null) {
+            for (String feature : features.split(",")) {
+                String token = feature.trim();
+                if (!token.isEmpty() && !"-".equals(token)) {
+                    validateFeatureToken(token);
+                    tokens.add(token);
+                }
+            }
+        }
+        return tokens.isEmpty() ? "-" : String.join(",", tokens);
+    }
+
     /**
      * Creates a new booking for the authenticated user (REQ10).
      *
@@ -366,12 +417,6 @@ public class GuiController {
      * @return newly created Booking.
      * @throws CrobsException on conflict or validation error.
      */
-    private static String normalizePurpose(String purpose) {
-        String normalized = purpose == null ? ""
-                : purpose.replaceAll("(?U)\\s+", " ").trim();
-        return normalized.isEmpty() ? "None" : normalized;
-    }
-
     public Booking book(String roomId, LocalDate date, LocalTime startTime,
                         LocalTime endTime, String purpose) throws CrobsException {
         String cleanRoom = roomId.trim();
@@ -526,7 +571,7 @@ public class GuiController {
     }
 
     public User addUserQuiet(String name) throws CrobsException {
-        User u = model.addUser(name.trim());
+        User u = model.addUser(normalizeWhitespace(name));
         knownUsers.put(u.getId().toLowerCase(), u);
         notifyListeners();
         return u;

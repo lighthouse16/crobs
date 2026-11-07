@@ -681,4 +681,157 @@ public class CrobsGuiTest {
         }
     }
 
+
+    @Test
+    void testUnicodeUserNamesFromDrawerReplayAsSingleCommands() throws Exception {
+        controller.login("u1");
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        String[] inputs = {"Alex\u0085Chen", "Maya\u2028Lin", "Sam\u2029Lee"};
+        String[] expected = {"Alex Chen", "Maya Lin", "Sam Lee"};
+
+        for (String input : inputs) {
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                drawer.openAddUser();
+                ((javax.swing.JTextField) componentField(drawer, "userNameField")).setText(input);
+                ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            });
+        }
+        for (String name : expected) {
+            assertTrue(model.listAllUsers().stream().anyMatch(u -> u.getName().equals(name)));
+        }
+
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openAddUser();
+            ((javax.swing.JTextField) componentField(drawer, "userNameField"))
+                    .setText("\u0085\u2028\u2029");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+            assertTrue(((javax.swing.JLabel) componentField(drawer, "errorLabel"))
+                    .getText().contains("User name cannot be blank"));
+        });
+        assertEquals(4, model.listAllUsers().size());
+
+        controller.closeLogger();
+        String log = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(4, log.trim().split("\\R").length);
+        for (String name : expected) {
+            assertTrue(log.contains("addUser " + name));
+        }
+        assertFalse(log.contains("\u0085"));
+        assertFalse(log.contains("\u2028"));
+        assertFalse(log.contains("\u2029"));
+
+        InputStream oldIn = System.in;
+        PrintStream oldOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try {
+            System.setIn(new ByteArrayInputStream((log + "quit\n").getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(output, true, "UTF-8"));
+            Application replay = new Application(null, null);
+            replay.run();
+            for (String name : expected) {
+                assertTrue(replay.getCrobs().listAllUsers().stream()
+                        .anyMatch(u -> u.getName().equals(name)));
+            }
+            assertFalse(output.toString("UTF-8").contains("Unknown command"));
+        } finally {
+            System.setIn(oldIn);
+            System.setOut(oldOut);
+        }
+    }
+
+    @Test
+    void testRoomFeatureLineBreakValidationAndCliReplay() throws Exception {
+        controller.login("u1");
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        int history = model.getUndoHistorySize();
+        String[] invalid = {"wifi\u0085projector", "wifi\u2028projector", "wifi\u2029projector"};
+
+        for (String feature : invalid) {
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                drawer.openAddRoom();
+                ((javax.swing.JTextField) componentField(drawer, "roomFeaturesField"))
+                        .setText(feature);
+                ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+                assertTrue(((javax.swing.JLabel) componentField(drawer, "errorLabel"))
+                        .getText().contains("Features"));
+            });
+            assertTrue(model.listAllRooms().isEmpty());
+            assertEquals(history, model.getUndoHistorySize());
+        }
+
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openAddRoom();
+            ((javax.swing.JComboBox<?>) componentField(drawer, "roomTypeCombo"))
+                    .setSelectedItem(RoomType.meetingRoom);
+            ((javax.swing.JTextField) componentField(drawer, "roomFeaturesField"))
+                    .setText("wifi, projector");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+        });
+        Room room = model.listAllRooms().get(0);
+        assertTrue(room.getFeatures().contains("wifi"));
+        assertTrue(room.getFeatures().contains("projector"));
+        int beforeEdit = model.getUndoHistorySize();
+
+        for (String feature : invalid) {
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                drawer.openEditRoom(room);
+                ((javax.swing.JComboBox<?>) componentField(drawer, "roomTypeCombo"))
+                        .setSelectedItem(RoomType.computerLab);
+                ((javax.swing.JTextField) componentField(drawer, "roomFeaturesField"))
+                        .setText(feature);
+                ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+                assertTrue(((javax.swing.JLabel) componentField(drawer, "errorLabel"))
+                        .getText().contains("Features"));
+            });
+            assertEquals(RoomType.meetingRoom, model.listRoom(room.getId()).getType());
+            assertEquals(beforeEdit, model.getUndoHistorySize());
+        }
+
+        assertThrows(IllegalArgumentException.class,
+                () -> controller.addRoom(RoomType.meetingRoom, 10,
+                        Collections.singleton("wifi,projector")));
+        assertThrows(IllegalArgumentException.class,
+                () -> controller.modifyRoom(room.getId(), "features", "wifi projector"));
+        assertEquals(beforeEdit, model.getUndoHistorySize());
+
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openEditRoom(room);
+            ((javax.swing.JComboBox<?>) componentField(drawer, "roomTypeCombo"))
+                    .setSelectedItem(RoomType.computerLab);
+            ((javax.swing.JTextField) componentField(drawer, "roomFeaturesField"))
+                    .setText("wifi, monitor");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+        });
+        Room updated = model.listRoom(room.getId());
+        assertEquals(RoomType.computerLab, updated.getType());
+        assertEquals(new HashSet<>(java.util.Arrays.asList("wifi", "monitor")), updated.getFeatures());
+
+        controller.closeLogger();
+        String log = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(5, log.trim().split("\\R").length);
+        assertTrue(log.contains("addRoom meetingRoom 20 projector,wifi"));
+        assertTrue(log.contains("modifyRoom " + room.getId() + " features wifi,monitor"));
+        assertFalse(log.contains("\u0085"));
+        assertFalse(log.contains("\u2028"));
+        assertFalse(log.contains("\u2029"));
+
+        InputStream oldIn = System.in;
+        PrintStream oldOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try {
+            System.setIn(new ByteArrayInputStream((log + "quit\n").getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(output, true, "UTF-8"));
+            Application replay = new Application(null, null);
+            replay.run();
+            Room replayed = replay.getCrobs().listRoom(room.getId());
+            assertEquals(updated.getType(), replayed.getType());
+            assertEquals(updated.getCapacity(), replayed.getCapacity());
+            assertEquals(updated.getFeatures(), replayed.getFeatures());
+            assertFalse(output.toString("UTF-8").contains("Unknown command"));
+        } finally {
+            System.setIn(oldIn);
+            System.setOut(oldOut);
+        }
+    }
+
 }

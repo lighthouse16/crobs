@@ -676,6 +676,7 @@ public class DrawerPanel extends JPanel {
                         return;
                     }
 
+                    featStr = GuiController.normalizeFeatureArgument(featStr);
                     controller.modifyRoom(activeRoom.getId(), "type", type.name());
                     controller.modifyRoom(activeRoom.getId(), "capacity", String.valueOf(cap));
                     controller.modifyRoom(activeRoom.getId(), "features", featStr);

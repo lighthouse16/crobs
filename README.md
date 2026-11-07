@@ -207,7 +207,7 @@ Local JAR files are optional build artifacts and are ignored by Git. Rebuild the
 
 ### Verification status
 
-Desktop suite: 68 passed, 0 failed. Headless suite: 65 passed, 0 failed, 3 window tests skipped.
+Desktop suite: 70 passed, 0 failed. Headless suite: 67 passed, 0 failed, 3 window tests skipped.
 
 Measured on 2026-11-07 using OpenJDK Temurin 25.0.4.1 with -source 8 -target 8 -g, on the local review-fix branch based on 4528407. JaCoCo 0.8.12 measured model package-level line coverage 511/517 = 98.84%, and Booking 66/68 = 97.06%. Test classes are excluded from the denominator; these are JaCoCo rather than IntelliJ grader measurements.
 
