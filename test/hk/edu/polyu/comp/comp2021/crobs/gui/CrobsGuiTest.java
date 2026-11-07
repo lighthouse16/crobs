@@ -628,4 +628,57 @@ public class CrobsGuiTest {
         assertTrue(log.contains("Project meeting Discussion"));
     }
 
+
+    @Test
+    void testUnicodeLineSeparatorsRemainReplayableThroughSwing() throws Exception {
+        controller.login("u1");
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        DrawerPanel drawer = new DrawerPanel(controller, message -> {});
+        LocalDate date = LocalDate.of(2027, 1, 5);
+
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            drawer.openBookFromSearch(room, date, LocalTime.of(9, 0), LocalTime.of(10, 0));
+            ((javax.swing.JTextArea) componentField(drawer, "purposeArea"))
+                    .setText("\u0085Project\u2028meeting\u2029Discussion\u0085");
+            ((JButton) componentField(drawer, "primaryActionBtn")).doClick();
+        });
+
+        Booking booking = controller.getBookingsQuiet().get(0);
+        assertEquals("Project meeting Discussion", booking.getPurpose());
+
+        controller.modifyBooking(booking.getId(), room.getId(), date,
+                LocalTime.of(9, 0), LocalTime.of(10, 30),
+                "Decisions\u0085Tasks\u2028Owner\u2029Review");
+        assertEquals("Decisions Tasks Owner Review", controller.getBookingsQuiet().get(0).getPurpose());
+
+        controller.modifyBooking(booking.getId(), room.getId(), date,
+                LocalTime.of(9, 0), LocalTime.of(10, 30), "\u0085\u2028\u2029");
+        assertEquals("None", controller.getBookingsQuiet().get(0).getPurpose());
+
+        controller.closeLogger();
+        String txt = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertEquals(5, txt.trim().split("\\R").length);
+        assertFalse(txt.contains("\u0085"));
+        assertFalse(txt.contains("\u2028"));
+        assertFalse(txt.contains("\u2029"));
+        assertTrue(txt.contains("Project meeting Discussion"));
+        assertTrue(txt.contains("Decisions Tasks Owner Review"));
+        assertTrue(txt.contains("modifyBooking " + booking.getId()));
+
+        InputStream originalIn = System.in;
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream capture = new ByteArrayOutputStream();
+        try {
+            System.setIn(new ByteArrayInputStream((txt + "quit\n").getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(capture, true, "UTF-8"));
+            Application replay = new Application(null, null);
+            replay.run();
+            assertEquals("None", replay.getCrobs().listBookings().get(0).getPurpose());
+            assertFalse(capture.toString("UTF-8").contains("Unknown command"));
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
+    }
+
 }

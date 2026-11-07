@@ -94,4 +94,4 @@ src/hk/edu/polyu/comp/comp2021/crobs/gui/
 
 ### 5. Automated Verification Results
 
-The complete 67-test suite passes (67 passed on desktop; 64 passed, 3 display tests skipped headless), including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.
+The complete 68-test suite passes (68 passed on desktop; 65 passed, 3 display tests skipped headless), including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.

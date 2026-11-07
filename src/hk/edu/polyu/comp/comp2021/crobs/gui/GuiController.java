@@ -366,11 +366,16 @@ public class GuiController {
      * @return newly created Booking.
      * @throws CrobsException on conflict or validation error.
      */
+    private static String normalizePurpose(String purpose) {
+        String normalized = purpose == null ? ""
+                : purpose.replaceAll("(?U)\\s+", " ").trim();
+        return normalized.isEmpty() ? "None" : normalized;
+    }
+
     public Booking book(String roomId, LocalDate date, LocalTime startTime,
                         LocalTime endTime, String purpose) throws CrobsException {
         String cleanRoom = roomId.trim();
-        String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim().replaceAll("\\s+", " ") : "None";
+        String cleanPurpose = normalizePurpose(purpose);
         String cmd = String.format("book %s %s %s %s %s",
                 cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);
@@ -394,8 +399,7 @@ public class GuiController {
                               LocalTime startTime, LocalTime endTime, String purpose) throws CrobsException {
         String cleanId = bookingId.trim();
         String cleanRoom = roomId.trim();
-        String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim().replaceAll("\\s+", " ") : "None";
+        String cleanPurpose = normalizePurpose(purpose);
         String cmd = String.format("modifyBooking %s %s %s %s %s %s",
                 cleanId, cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);
