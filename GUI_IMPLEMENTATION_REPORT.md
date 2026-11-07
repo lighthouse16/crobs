@@ -6,7 +6,7 @@
 This report documents the implementation of the Java desktop Graphical User Interface (BON1, 6 bonus points) for the PolyU COMP2021 Fall 2026 Group Project **Campus ROom Booking System (CROBS)**.
 
 Key accomplishments:
-- **Design Alignment**: Built strictly to the **CROBS V3 Full-width Desktop** workspace standard (`CROBS_GUI_V3.html`).
+- **Design Alignment**: Designed following the internal **CROBS V3 Full-width Desktop** workspace prototype (`CROBS_GUI_V3.html`) while strictly fulfilling all requirements in the official course specification (`project_description.pdf`).
 - **Standard Java API Only**: Built 100% using Java SE JDK 25 standard library (`javax.swing.*`, `java.awt.*`). Zero third-party GUI dependencies.
 - **Strict Model Separation (MVC)**: The GUI communicates exclusively through `CROBS` public model APIs. No duplicate booking/availability logic, no reflection, no private state bypass.
 - **Integrated Model Evolution**: GUI, CLI, and model were evolved together to support both bonus features while preserving MVC boundaries.
@@ -94,4 +94,4 @@ src/hk/edu/polyu/comp/comp2021/crobs/gui/
 
 ### 5. Automated Verification Results
 
-The complete 53-test suite passes, including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.
+The complete 59-test suite passes (59 passed on desktop; 56 passed, 3 display tests skipped headless), including model invariants, command undo/redo authorization, GUI components, and the end-to-end lifecycle.

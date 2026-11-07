@@ -44,7 +44,7 @@ import java.util.List;
 
 /**
  * Screen E: Administration panel for managing rooms (REQ7, REQ8, REQ9, REQ16)
- * and managing users (REQ2, REQ3, REQ4) matching the CROBS V3 specification.
+ * and managing users (REQ2, REQ3, REQ4) matching the internal CROBS V3 GUI layout design.
  * Connects all creation and editing actions directly to the V3 slide-out drawer.
  */
 @SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity", "InstanceofChain"})

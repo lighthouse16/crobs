@@ -6,7 +6,14 @@ import hk.edu.polyu.comp.comp2021.crobs.gui.dialog.RoomEditorDialog;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.FindRoomsPanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.ManagePanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.MyBookingsPanel;
+import hk.edu.polyu.comp.comp2021.crobs.Application;
+import hk.edu.polyu.comp.comp2021.crobs.gui.view.LoginPanel;
 import hk.edu.polyu.comp.comp2021.crobs.gui.view.RoomSchedulePanel;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import hk.edu.polyu.comp.comp2021.crobs.model.Booking;
 import hk.edu.polyu.comp.comp2021.crobs.model.CROBS;
 import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
@@ -362,35 +369,110 @@ public class CrobsGuiTest {
 
     @Test
     void testGuiMultiwordPreservationAndCliReplay() throws Exception {
-        controller.login("u1");
-        User user = controller.addUser("Dr. Alexander Lam");
-        assertEquals("Dr. Alexander Lam", user.getName());
-        assertEquals("Dr. Alexander Lam", controller.getAllKnownUsers().stream()
+        File tempTxt = File.createTempFile("crobs_gui_test_", ".txt");
+        File tempHtml = File.createTempFile("crobs_gui_test_", ".html");
+        tempTxt.deleteOnExit();
+        tempHtml.deleteOnExit();
+
+        GuiSessionLogger dedicatedLogger = new GuiSessionLogger(tempHtml.getAbsolutePath(), tempTxt.getAbsolutePath());
+        GuiController dedicatedController = new GuiController(new CROBS(), dedicatedLogger);
+
+        dedicatedController.login("u1");
+        User user = dedicatedController.addUser("Dr. Alexander Lam & Team <Alpha>");
+        assertEquals("Dr. Alexander Lam & Team <Alpha>", user.getName());
+        assertEquals("Dr. Alexander Lam & Team <Alpha>", dedicatedController.getAllKnownUsers().stream()
                 .filter(u -> u.getId().equals(user.getId())).findFirst().get().getName());
 
-        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        Room room = dedicatedController.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
         LocalDate date = LocalDate.now().plusDays(2);
-        Booking booking = controller.book(room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 0), "Weekly project meeting");
-        assertEquals("Weekly project meeting", booking.getPurpose());
+        Booking booking = dedicatedController.book(room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 0), "Weekly project meeting & discussion");
+        assertEquals("Weekly project meeting & discussion", booking.getPurpose());
 
-        controller.modifyBooking(booking.getId(), room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 30), "Extended project meeting");
-        assertEquals("Extended project meeting", controller.getBookingsQuiet().stream()
+        dedicatedController.modifyBooking(booking.getId(), room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 30), "Extended project meeting & review");
+        assertEquals("Extended project meeting & review", dedicatedController.getBookingsQuiet().stream()
                 .filter(b -> b.getId().equals(booking.getId())).findFirst().get().getPurpose());
+
+        dedicatedController.logout();
+
+        // 1. Verify TXT log preserves exact multiword tokens
+        String txtContent = new String(Files.readAllBytes(tempTxt.toPath()), StandardCharsets.UTF_8);
+        assertTrue(txtContent.contains("addUser Dr. Alexander Lam & Team <Alpha>"));
+        assertTrue(txtContent.contains("Weekly project meeting & discussion"));
+        assertTrue(txtContent.contains("Extended project meeting & review"));
+
+        // 2. Verify HTML log escapes HTML special characters properly
+        String htmlContent = new String(Files.readAllBytes(tempHtml.toPath()), StandardCharsets.UTF_8);
+        assertTrue(htmlContent.contains("&amp;"));
+        assertTrue(htmlContent.contains("&lt;Alpha&gt;"));
+        assertFalse(htmlContent.contains("<Alpha>"));
+
+        // 3. Replay generated TXT log through actual CLI Application entry point
+        String replayScript = txtContent + System.lineSeparator() + "quit" + System.lineSeparator();
+        InputStream originalIn = System.in;
+        PrintStream originalOut = System.out;
+        try {
+            System.setIn(new ByteArrayInputStream(replayScript.getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(new ByteArrayOutputStream(), true, "UTF-8"));
+            Application app = new Application(null, null);
+            app.run();
+
+            CROBS replayedModel = app.getCrobs();
+            assertEquals("Dr. Alexander Lam & Team <Alpha>", replayedModel.listAllUsers().stream()
+                    .filter(u -> u.getId().equals(user.getId())).findFirst().get().getName());
+            assertEquals(1, replayedModel.listAllRooms().size());
+
+            replayedModel.login("u1");
+            assertEquals("Extended project meeting & review", replayedModel.listBookings().get(0).getPurpose());
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+            tempTxt.delete();
+            tempHtml.delete();
+        }
     }
 
     @Test
-    void testCleanGuiStartupMatchesSpecification() {
-        CROBS freshModel = new CROBS();
-        GuiSessionLogger freshLogger = new GuiSessionLogger(null, null);
-        GuiController freshController = new GuiController(freshModel, freshLogger);
+    void testCleanGuiStartupMatchesSpecification() throws Exception {
+        // 1. Normal GUI startup path (default, no --demo)
+        GuiController cleanCtrl = CrobsGuiApplication.createController(new String[0]);
+        assertFalse(cleanCtrl.isLoggedIn());
+        assertNull(cleanCtrl.getCurrentUser());
+        assertEquals(0, cleanCtrl.getAllRoomsQuiet().size());
+        assertEquals(0, cleanCtrl.getBookingsQuiet().size());
+        assertEquals(0, cleanCtrl.getModel().getUndoHistorySize());
+        assertFalse(cleanCtrl.canUndo());
+        assertEquals(1, cleanCtrl.getAllKnownUsers().size());
+        assertEquals("u1", cleanCtrl.getAllKnownUsers().get(0).getId());
 
-        // Verification of spec initial state:
-        assertFalse(freshController.isLoggedIn());
-        assertNull(freshController.getCurrentUser());
-        assertEquals(0, freshController.getAllRoomsQuiet().size());
-        assertEquals(0, freshController.getBookingsQuiet().size());
-        assertEquals(0, freshModel.getUndoHistorySize());
-        assertEquals(1, freshController.getAllKnownUsers().size());
-        assertEquals("u1", freshController.getAllKnownUsers().get(0).getId());
+        // Verify clean login panel renders without error and only has default user
+        LoginPanel cleanLogin = new LoginPanel(cleanCtrl, null);
+        assertNotNull(cleanLogin);
+
+        // 2. Explicit demo mode startup path (--demo)
+        GuiController demoCtrl = CrobsGuiApplication.createController(new String[]{"--demo"});
+        assertFalse(demoCtrl.isLoggedIn());
+        assertNull(demoCtrl.getCurrentUser());
+        assertEquals(5, demoCtrl.getAllRoomsQuiet().size());
+        // Unauthenticated session has 0 personal bookings visible
+        assertEquals(0, demoCtrl.getBookingsQuiet().size());
+        // Logging in as demo users reveals their seeded bookings
+        demoCtrl.loginQuiet("u2");
+        assertEquals(4, demoCtrl.getBookingsQuiet().size());
+        demoCtrl.loginQuiet("u3");
+        assertEquals(3, demoCtrl.getBookingsQuiet().size());
+        demoCtrl.loginQuiet("u1");
+        assertEquals(1, demoCtrl.getBookingsQuiet().size());
+        demoCtrl.logoutQuiet();
+
+        assertEquals(0, demoCtrl.getModel().getUndoHistorySize());
+        assertFalse(demoCtrl.canUndo());
+        assertEquals(3, demoCtrl.getAllKnownUsers().size());
+        assertTrue(demoCtrl.getAllKnownUsers().stream().anyMatch(u -> u.getId().equals("u1")));
+        assertTrue(demoCtrl.getAllKnownUsers().stream().anyMatch(u -> u.getId().equals("u2")));
+        assertTrue(demoCtrl.getAllKnownUsers().stream().anyMatch(u -> u.getId().equals("u3")));
+
+        // Verify demo login panel renders with all demo users available
+        LoginPanel demoLogin = new LoginPanel(demoCtrl, null);
+        assertNotNull(demoLogin);
     }
 }

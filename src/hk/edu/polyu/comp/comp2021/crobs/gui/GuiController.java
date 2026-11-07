@@ -595,4 +595,13 @@ public class GuiController {
         model.clearUndoHistory();
         notifyListeners();
     }
+
+    /**
+     * Returns the underlying domain model instance (for testing and verification).
+     *
+     * @return CROBS domain model.
+     */
+    CROBS getModel() {
+        return model;
+    }
 }

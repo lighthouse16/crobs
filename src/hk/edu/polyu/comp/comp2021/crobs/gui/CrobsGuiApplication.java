@@ -22,41 +22,44 @@ import java.util.HashSet;
 public class CrobsGuiApplication {
 
     public static void main(String[] args) {
-        String htmlLog = null;
-        String txtLog = null;
-        boolean demoMode = false;
-
-        for (int i = 0; i < args.length; i++) {
-            if ("-html".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
-                htmlLog = args[++i];
-            } else if ("-txt".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
-                txtLog = args[++i];
-            } else if ("--demo".equalsIgnoreCase(args[i])) {
-                demoMode = true;
-            }
-        }
-
-        final String finalHtmlLog = htmlLog;
-        final String finalTxtLog = txtLog;
-        final boolean finalDemoMode = demoMode;
-
+        final String[] appArgs = args;
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ignored) {
             }
 
-            CROBS model = new CROBS();
-            GuiSessionLogger logger = new GuiSessionLogger(finalHtmlLog, finalTxtLog);
-            GuiController controller = new GuiController(model, logger);
-
-            if (finalDemoMode) {
-                initDefaultState(controller);
-            }
-
+            GuiController controller = createController(appArgs);
             MainFrame frame = new MainFrame(controller);
             frame.setVisible(true);
         });
+    }
+
+    static GuiController createController(String[] args) {
+        String htmlLog = null;
+        String txtLog = null;
+        boolean demoMode = false;
+
+        if (args != null) {
+            for (int i = 0; i < args.length; i++) {
+                if ("-html".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
+                    htmlLog = args[++i];
+                } else if ("-txt".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
+                    txtLog = args[++i];
+                } else if ("--demo".equalsIgnoreCase(args[i])) {
+                    demoMode = true;
+                }
+            }
+        }
+
+        CROBS model = new CROBS();
+        GuiSessionLogger logger = new GuiSessionLogger(htmlLog, txtLog);
+        GuiController controller = new GuiController(model, logger);
+
+        if (demoMode) {
+            initDefaultState(controller);
+        }
+        return controller;
     }
 
     private static void initDefaultState(GuiController controller) {
@@ -64,7 +67,7 @@ public class CrobsGuiApplication {
             // Default active session: u1 (SuperAdmin)
             controller.loginQuiet("u1");
 
-            // Seed initial campus rooms and bookings matching CROBS_GUI_V3.html
+            // Seed initial campus rooms and bookings matching the internal CROBS V3 GUI prototype
             if (controller.getAllRoomsQuiet().isEmpty()) {
                 controller.addRoomQuiet(RoomType.lectureTheatre, 120, new HashSet<>(Arrays.asList("projector", "wifi", "audio")));
                 controller.addRoomQuiet(RoomType.seminarRoom, 24, new HashSet<>(Arrays.asList("whiteboard", "wifi", "display")));

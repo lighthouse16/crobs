@@ -20,9 +20,16 @@ javac -encoding UTF-8 -cp "lib/*:src:test" -d out $(find src test -name "*.java"
 
 ### 2. Launch the Desktop GUI Application
 
-#### Standard Run
+#### Standard Run (Clean State per Official Specification)
+By default, the application starts with one default Superadmin (`u1`), no user logged in, and 0 preloaded rooms or bookings:
 ```bash
 java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication
+```
+
+#### Run with Prototype Demonstration Data
+To launch the GUI with pre-seeded campus rooms, users, and reservations:
+```bash
+java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication --demo
 ```
 
 #### Run with REQ1 Session Logging
@@ -38,7 +45,7 @@ java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication -h
 
 ### 3. Run Test Suites
 
-The current suite contains 53 model, command-pattern, GUI, and end-to-end tests. All tests pass in the provided runner.
+The current suite contains 59 model, command-pattern, GUI, and end-to-end tests (59 passed on desktop; 56 passed, 3 display tests skipped headless). All tests pass in the provided runner.
 
 ```bash
 java -cp "out;lib/*" TestRunner

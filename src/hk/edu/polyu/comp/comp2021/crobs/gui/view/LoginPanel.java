@@ -25,7 +25,7 @@ import java.awt.GridBagLayout;
 
 /**
  * Screen: Sign in to CROBS.
- * Dedicated initial view matching official CROBS V3 specification.
+ * Dedicated initial view matching the internal CROBS V3 GUI layout design.
  * Features clean centered card, quick user selector pills, and seamless login flow.
  */
 @SuppressWarnings({"MagicNumber", "JavaDoc", "AssignmentToNull", "AnonymousClassComplexity"})

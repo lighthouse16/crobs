@@ -52,7 +52,7 @@ import java.util.List;
 
 /**
  * Main application window for CROBS desktop workspace (BON1).
- * 100% faithful to the official CROBS V3 specification, featuring full-width edge-aligned
+ * Faithful to the internal CROBS V3 GUI layout design, featuring full-width edge-aligned
  * layout, unified slide-out drawer on the right, instant user-switcher preview menu,
  * and bottom toast notifications.
  */

@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Slide-out drawer component matching the CROBS V3 specification (Screen B and all action panels).
+ * Slide-out drawer component matching the internal CROBS V3 GUI layout design (Screen B and all action panels).
  * Docked on the right side of the main workspace with 420px width, clean header, dynamic body,
  * and footer action buttons.
  */

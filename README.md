@@ -169,6 +169,11 @@ run-gui.bat
 java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication -html gui_session.html -txt gui_session.txt
 ```
 
+*By default, the GUI starts with a clean dataset (single superadmin `u1`, 0 rooms, 0 bookings) per the official course specification. To launch with pre-seeded campus demonstration data, pass `--demo`:*
+```bash
+java -cp "out;lib/*" hk.edu.polyu.comp.comp2021.crobs.gui.CrobsGuiApplication --demo
+```
+
 ### Running Command-Line Interface (CLI)
 ```bash
 # Windows
@@ -204,7 +209,7 @@ test.bat
 
 Desktop suite: 59 passed, 0 failed. Headless suite: 56 passed, 0 failed, 3 window tests skipped.
 
-Measured on 2026-11-07 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g`. Production source tree SHA-256 `6ba3a04cb0a78cb83efd91287eee2b5c72c30062946a0a4ed5292f3524deeb20` (sorted relative source paths, NUL, exact bytes, NUL). JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` line coverage **510/518 = 98.46%**; `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
+Measured on 2026-11-07 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g`. Production source tree SHA-256 `0da59608d01080f8f7f405c739a05b005e68ccf65adc90e942f91b6764d3cdc4` (sorted relative source paths, NUL, exact bytes, NUL). JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` package-level line coverage **509/515 = 98.83%** (sum of individual class counters **512/518 = 98.84%**); `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
 
 ### Test Coverage Highlights
 - **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, defensive snapshots, `roomType` alias, self-aliasing feature copies, and unauthenticated schedule privacy.
