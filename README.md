@@ -209,14 +209,14 @@ test.bat
 
 Desktop suite: 59 passed, 0 failed. Headless suite: 56 passed, 0 failed, 3 window tests skipped.
 
-Measured on 2026-11-07 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g`. Production source tree SHA-256 `0da59608d01080f8f7f405c739a05b005e68ccf65adc90e942f91b6764d3cdc4` (sorted relative source paths, NUL, exact bytes, NUL). JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` package-level line coverage **509/515 = 98.83%** (sum of individual class counters **512/518 = 98.84%**); `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
+Measured on 2026-11-07 on OpenJDK Temurin 25.0.4.1 (Java 25 LTS) with `-source 8 -target 8 -g` across verified commit `fc1d418`. JaCoCo 0.8.12, clean separate production/test builds: production package `hk.edu.polyu.comp.comp2021.crobs.model` package-level line coverage **509/515 = 98.83%** (sum of individual class counters **512/518 = 98.84%**); `Booking` **66/68 = 97.06%**. Test classes are excluded from the denominator; nested model classes are included.
 
 ### Test Coverage Highlights
 - **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, defensive snapshots, `roomType` alias, self-aliasing feature copies, and unauthenticated schedule privacy.
 - **`CrobsGuiTest`**: Component lifecycle tests, drawer state transitions, schedule privacy masking, multiword string preservation, clean startup validation, and session logger integration.
 - **`CrobsGuiEndToEndTest`**: Comprehensive 20-step end-to-end integration scenario validating real user workflows from superadmin bootstrap to room booking and session report generation.
 - **`UndoRedoTest`**: Exhaustive test suite for BON2 command pattern undo/redo across all 9 mutating operations, history clearing, cascade booking restoration, CLI integration, and GUI controller bindings.
-- **IntelliJ Code Inspection (COMP2021_PROJECT.xml)**: Profile verified via headless IntelliJ IDEA 2026.1.3 (inspect.bat). **0 vi phạm theo 31 rule của COMP2021_PROJECT.xml trên IntelliJ IDEA 2026.1.3** trong mã nguồn sản xuất (src/). Full 59/59 tests pass on JDK 25 LTS.
+- **IntelliJ Code Inspection (`COMP2021_PROJECT.xml`)**: The official `COMP2021_PROJECT.xml` inspection profile contains 31 enabled rules. Final inspection against the current source is pending verification due to active IDE session locking. Full 59/59 tests pass on JDK 25 LTS.
 
 ---
 
