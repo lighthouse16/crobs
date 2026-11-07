@@ -502,6 +502,28 @@ public class CrobsGuiTest {
         assertEquals(RoomType.meetingRoom, model.listRoom(room.getId()).getType());
         assertEquals(10, model.listRoom(room.getId()).getCapacity());
         assertEquals(history, model.getUndoHistorySize());
+
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            javax.swing.JFrame frame = new javax.swing.JFrame();
+            try {
+                RoomEditorDialog dialog = new RoomEditorDialog(frame, controller, room);
+                javax.swing.JComboBox<?> typeCombo = (javax.swing.JComboBox<?>) componentField(dialog, "typeCombo");
+                javax.swing.JTextField featField = (javax.swing.JTextField) componentField(dialog, "featuresField");
+                javax.swing.JLabel errLabel = (javax.swing.JLabel) componentField(dialog, "errorLabel");
+                typeCombo.setSelectedItem(RoomType.lectureTheatre);
+                featField.setText("wifi\u0085projector");
+                java.lang.reflect.Method attemptMethod = RoomEditorDialog.class.getDeclaredMethod("attemptSave");
+                attemptMethod.setAccessible(true);
+                attemptMethod.invoke(dialog);
+                assertFalse(dialog.isSaved());
+                assertTrue(errLabel.getText().contains("Features"));
+                assertEquals(RoomType.meetingRoom, model.listRoom(room.getId()).getType());
+                assertEquals(history, model.getUndoHistorySize());
+                dialog.dispose();
+            } finally {
+                frame.dispose();
+            }
+        }
     }
 
     @Test

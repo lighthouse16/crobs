@@ -23,11 +23,12 @@ public class User {
         if (id == null || id.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
-        if (name == null || name.trim().isEmpty()) {
+        String cleanName = (name != null) ? name.replaceAll("(?U)\\s+", " ").trim() : "";
+        if (cleanName.isEmpty()) {
             throw new IllegalArgumentException("User name cannot be null or empty");
         }
         this.id = id.trim();
-        this.name = name.trim();
+        this.name = cleanName;
         this.role = (role != null) ? role : UserRole.REGULAR;
     }
 

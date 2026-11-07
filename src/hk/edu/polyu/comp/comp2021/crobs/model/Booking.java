@@ -55,7 +55,7 @@ public class Booking {
         this.date = date;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.purpose = (purpose != null) ? purpose.trim() : "";
+        this.purpose = (purpose != null) ? purpose.replaceAll("(?U)\\s+", " ").trim() : "";
     }
 
     /**
@@ -168,7 +168,7 @@ public class Booking {
      * @param purpose new purpose string.
      */
     public void setPurpose(String purpose) {
-        this.purpose = (purpose != null) ? purpose.trim() : "";
+        this.purpose = (purpose != null) ? purpose.replaceAll("(?U)\\s+", " ").trim() : "";
     }
 
     /**
@@ -195,7 +195,7 @@ public class Booking {
         this.date = date;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.purpose = (purpose != null) ? purpose.trim() : "";
+        this.purpose = (purpose != null) ? purpose.replaceAll("(?U)\\s+", " ").trim() : "";
     }
 
     /**

@@ -202,13 +202,14 @@ public class CROBS {
      */
     public User addUser(String name) throws CrobsException {
         checkAdminAccess();
-        if (name == null || name.trim().isEmpty()) {
+        String cleanName = (name != null) ? name.replaceAll("(?U)\\s+", " ").trim() : "";
+        if (cleanName.isEmpty()) {
             throw new IllegalArgumentException("User name cannot be blank");
         }
 
         // Generate a unique user ID and create a new regular user
         String newId = generateUserId();
-        User newUser = new User(newId, name.trim(), UserRole.REGULAR);
+        User newUser = new User(newId, cleanName, UserRole.REGULAR);
         users.put(newUser.getId().toLowerCase(), newUser);
         recordCommand(new AddUserCommand(mutationAccess, newUser), UndoRedoManager.Permission.ADMIN);
         return snapshot(newUser);

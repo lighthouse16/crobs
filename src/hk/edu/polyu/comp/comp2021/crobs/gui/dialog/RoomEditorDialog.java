@@ -177,11 +177,19 @@ public class RoomEditorDialog extends JDialog {
         }
 
         String featText = featuresField.getText().trim();
+        String normalizedFeats;
+        try {
+            normalizedFeats = GuiController.normalizeFeatureArgument(featText);
+        } catch (IllegalArgumentException e) {
+            errorLabel.setText(e.getMessage());
+            return;
+        }
+
         Set<String> feats = new HashSet<>();
-        if (!featText.isEmpty()) {
-            for (String f : featText.split(",")) {
+        if (!"-".equals(normalizedFeats)) {
+            for (String f : normalizedFeats.split(",")) {
                 if (!f.trim().isEmpty()) {
-                    feats.add(f.trim().replace(' ', '_'));
+                    feats.add(f.trim());
                 }
             }
         }
@@ -193,18 +201,40 @@ public class RoomEditorDialog extends JDialog {
             } else {
                 // Modify room REQ8 - modify fields sequentially
                 Room current = controller.getRoomQuiet(roomId);
-                if (current != null) {
-                    if (current.getType() != type) {
+                if (current == null) {
+                    errorLabel.setText("Room not found: " + roomId);
+                    return;
+                }
+                RoomType oldType = current.getType();
+                int oldCap = current.getCapacity();
+                String oldFeatStr = GuiController.normalizeFeatureArgument(String.join(",", current.getFeatures()));
+
+                boolean typeChanged = current.getType() != type;
+                boolean capChanged = current.getCapacity() != cap;
+                boolean featChanged = !normalizedFeats.equalsIgnoreCase(oldFeatStr);
+
+                boolean typeApplied = false;
+                boolean capApplied = false;
+                try {
+                    if (typeChanged) {
                         controller.modifyRoom(roomId, "type", type.name());
+                        typeApplied = true;
                     }
-                    if (current.getCapacity() != cap) {
+                    if (capChanged) {
                         controller.modifyRoom(roomId, "capacity", String.valueOf(cap));
+                        capApplied = true;
                     }
-                    String newFeatStr = String.join(",", feats);
-                    String oldFeatStr = String.join(",", current.getFeatures());
-                    if (!newFeatStr.equalsIgnoreCase(oldFeatStr)) {
-                        controller.modifyRoom(roomId, "features", newFeatStr);
+                    if (featChanged) {
+                        controller.modifyRoom(roomId, "features", normalizedFeats);
                     }
+                } catch (Exception e) {
+                    if (capApplied) {
+                        try { controller.modifyRoom(roomId, "capacity", String.valueOf(oldCap)); } catch (Exception ignored) {}
+                    }
+                    if (typeApplied) {
+                        try { controller.modifyRoom(roomId, "type", oldType.name()); } catch (Exception ignored) {}
+                    }
+                    throw e;
                 }
             }
             saved = true;
@@ -215,7 +245,6 @@ public class RoomEditorDialog extends JDialog {
             errorLabel.setText("Error: " + e.getMessage());
         }
     }
-
     /**
      * Checks if changes were saved.
      *

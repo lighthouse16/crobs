@@ -322,6 +322,8 @@ class CROBSTest {
         assertTrue(defaultRoleUser.toString().contains("u99"));
         assertThrows(IllegalArgumentException.class, () -> new User(null, "Name", UserRole.REGULAR));
         assertThrows(IllegalArgumentException.class, () -> new User("u1", " ", UserRole.REGULAR));
+        assertThrows(IllegalArgumentException.class, () -> new User("u1", "  \u0085  ", UserRole.REGULAR));
+        assertThrows(IllegalArgumentException.class, () -> crobs.addUser("  \u0085  "));
         assertThrows(IllegalArgumentException.class, () -> defaultRoleUser.setRole(null));
 
         // UserRole and RoomType parsing branches
@@ -517,7 +519,6 @@ class CROBSTest {
     /**
      * CLI runner for CROBSTest to verify test suites from terminal.
      *
-     * @param args command line arguments.
      */
     @Test
     void testRoomFeaturesSelfAliasingAndDefensiveCopies() {

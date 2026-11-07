@@ -1,7 +1,7 @@
 # CROBS — Campus ROom Booking System
 
 [![Java](https://img.shields.io/badge/Java-8%20Language%20Level-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![JUnit 5](https://img.shields.io/badge/Tests-53%2F53%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
+[![JUnit 5](https://img.shields.io/badge/Tests-70%2F70%20Passing-25A162?logo=junit5&logoColor=white)](https://junit.org/junit5/)
 [![GUI](https://img.shields.io/badge/GUI-Swing%20Desktop%20(BON1)-007ACC)]()
 [![Architecture](https://img.shields.io/badge/Architecture-MVC%20Pattern-orange)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -209,7 +209,7 @@ Local JAR files are optional build artifacts and are ignored by Git. Rebuild the
 
 Desktop suite: 70 passed, 0 failed. Headless suite: 67 passed, 0 failed, 3 window tests skipped.
 
-Measured on 2026-11-07 using OpenJDK Temurin 25.0.4.1 with -source 8 -target 8 -g, on the validated production source. JaCoCo 0.8.12 measured model package-level line coverage 511/517 = 98.84%, and Booking 66/68 = 97.06%. Test classes are excluded from the denominator; these are JaCoCo rather than IntelliJ grader measurements.
+Measured on 2026-11-07 using OpenJDK Temurin 25.0.4.1 with -source 8 -target 8 -g, on the validated production source. JaCoCo 0.8.12 measured model package-level line coverage 513/519 = 98.84%, and Booking 66/68 = 97.06%. Test classes are excluded from the denominator; these are JaCoCo rather than IntelliJ grader measurements.
 
 ### Test Coverage Highlights
 - **`CROBSTest`**: Regression tests for domain logic, conflict detection, privilege boundaries, cascading cancellations, atomic updates, ID normalization, defensive snapshots, `roomType` alias, self-aliasing feature copies, and unauthenticated schedule privacy.

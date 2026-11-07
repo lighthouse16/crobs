@@ -392,7 +392,7 @@ public class GuiController {
         return tokens.isEmpty() ? "-" : String.join(",", tokens);
     }
 
-    static String normalizeFeatureArgument(String features) {
+    public static String normalizeFeatureArgument(String features) {
         List<String> tokens = new ArrayList<>();
         if (features != null) {
             for (String feature : features.split(",")) {
