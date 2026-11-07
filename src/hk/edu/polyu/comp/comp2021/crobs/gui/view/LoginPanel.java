@@ -3,6 +3,8 @@ package hk.edu.polyu.comp.comp2021.crobs.gui.view;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiController;
 import hk.edu.polyu.comp.comp2021.crobs.gui.GuiTheme;
 import hk.edu.polyu.comp.comp2021.crobs.model.CrobsException;
+import hk.edu.polyu.comp.comp2021.crobs.model.User;
+import java.util.List;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -36,6 +38,7 @@ public class LoginPanel extends JPanel {
 
     private JTextField userIdField;
     private JLabel errorLabel;
+    private JPanel quickGroup;
 
     public LoginPanel(GuiController controller, Runnable onLoginSuccess) {
         this.controller = controller;
@@ -122,14 +125,10 @@ public class LoginPanel extends JPanel {
         card.add(quickLabel);
         card.add(Box.createVerticalStrut(8));
 
-        JPanel quickGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        quickGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         quickGroup.setOpaque(false);
         quickGroup.setAlignmentX(LEFT_ALIGNMENT);
-
-        quickGroup.add(createQuickPill("u1 (Superadmin)", "u1"));
-        quickGroup.add(createQuickPill("u2 (Alex Chen)", "u2"));
-        quickGroup.add(createQuickPill("u3 (Jamie Lee)", "u3"));
-
+        refreshQuickPills();
         card.add(quickGroup);
 
         add(card);
@@ -171,9 +170,27 @@ public class LoginPanel extends JPanel {
         }
     }
 
+    private void refreshQuickPills() {
+        if (quickGroup == null) {
+            return;
+        }
+        quickGroup.removeAll();
+        List<User> users = controller.getAllKnownUsers();
+        if (users.isEmpty()) {
+            quickGroup.add(createQuickPill("u1 (Superadmin)", "u1"));
+        } else {
+            for (User u : users) {
+                quickGroup.add(createQuickPill(u.getId() + " (" + u.getName().replace("_", " ") + ")", u.getId()));
+            }
+        }
+        quickGroup.revalidate();
+        quickGroup.repaint();
+    }
+
     public void reset() {
         userIdField.setText("");
         errorLabel.setText(" ");
+        refreshQuickPills();
         javax.swing.SwingUtilities.invokeLater(() -> userIdField.requestFocusInWindow());
     }
 }

@@ -519,6 +519,97 @@ class CROBSTest {
      *
      * @param args command line arguments.
      */
+    @Test
+    void testRoomFeaturesSelfAliasingAndDefensiveCopies() {
+        Set<String> initFeat = new HashSet<>();
+        initFeat.add("wifi");
+        initFeat.add("projector");
+        Room room = new Room("r1", RoomType.lectureTheatre, 100, initFeat);
+        assertEquals(2, room.getFeatures().size());
+        assertTrue(room.getFeatures().contains("wifi"));
+        assertTrue(room.getFeatures().contains("projector"));
+
+        // Self-aliasing check: setFeatures(room.getFeatures()) must not wipe features
+        room.setFeatures(room.getFeatures());
+        assertEquals(2, room.getFeatures().size());
+        assertTrue(room.getFeatures().contains("wifi"));
+        assertTrue(room.getFeatures().contains("projector"));
+
+        // Null and empty string handling
+        Set<String> mixed = new HashSet<>();
+        mixed.add("whiteboard");
+        mixed.add("   ");
+        mixed.add(null);
+        room.setFeatures(mixed);
+        assertEquals(1, room.getFeatures().size());
+        assertTrue(room.getFeatures().contains("whiteboard"));
+
+        // Setting null clears features safely
+        room.setFeatures(null);
+        assertTrue(room.getFeatures().isEmpty());
+    }
+
+    @Test
+    void testModifyRoomRoomTypeAliasAndUndoRedo() throws CrobsException {
+        Room room = crobs.addRoom(RoomType.lectureTheatre, 80, Collections.emptySet());
+        assertEquals(RoomType.lectureTheatre, room.getType());
+
+        // Alias: roomType (case-insensitive)
+        crobs.modifyRoom(room.getId(), "roomType", "seminarRoom");
+        assertEquals(RoomType.seminarRoom, crobs.listRoom(room.getId()).getType());
+
+        // Undo restores lectureTheatre
+        assertTrue(crobs.undo());
+        assertEquals(RoomType.lectureTheatre, crobs.listRoom(room.getId()).getType());
+
+        // Redo restores seminarRoom
+        assertTrue(crobs.redo());
+        assertEquals(RoomType.seminarRoom, crobs.listRoom(room.getId()).getType());
+
+        // Mixed case alias: RoOmTyPe
+        crobs.modifyRoom(room.getId(), "RoOmTyPe", "computerLab");
+        assertEquals(RoomType.computerLab, crobs.listRoom(room.getId()).getType());
+
+        // Invalid roomType value throws CrobsException
+        assertThrows(CrobsException.class, () -> crobs.modifyRoom(room.getId(), "roomType", "invalidType"));
+    }
+
+    @Test
+    void testScheduleGuestAndRolePrivacy() throws CrobsException {
+        Room room = crobs.addRoom(RoomType.seminarRoom, 30, Collections.emptySet());
+        User u2 = crobs.addUser("Bob Dylan");
+        LocalDate date = LocalDate.of(2026, 12, 1);
+        crobs.book(room.getId(), date, LocalTime.of(9, 0), LocalTime.of(10, 0), "Admin Keynote");
+
+        crobs.login(u2.getId());
+        crobs.book(room.getId(), date, LocalTime.of(11, 0), LocalTime.of(12, 0), "Bob Study Group");
+
+        // 1. Regular user (u2) view: sees own ID, u1 masked, both purposes visible
+        List<Booking> u2Sched = crobs.schedule(room.getId(), date);
+        assertEquals(2, u2Sched.size());
+        assertEquals("(hidden)", u2Sched.get(0).getUserId());
+        assertEquals("Admin Keynote", u2Sched.get(0).getPurpose());
+        assertEquals(u2.getId(), u2Sched.get(1).getUserId());
+        assertEquals("Bob Study Group", u2Sched.get(1).getPurpose());
+
+        // 2. Unauthenticated Guest view (logged out): both IDs masked, both purposes visible
+        crobs.logout();
+        assertFalse(crobs.isLoggedIn());
+        List<Booking> guestSched = crobs.schedule(room.getId(), date);
+        assertEquals(2, guestSched.size());
+        assertEquals("(hidden)", guestSched.get(0).getUserId());
+        assertEquals("Admin Keynote", guestSched.get(0).getPurpose());
+        assertEquals("(hidden)", guestSched.get(1).getUserId());
+        assertEquals("Bob Study Group", guestSched.get(1).getPurpose());
+
+        // 3. Admin user view (u1): sees all IDs, both purposes visible
+        crobs.login("u1");
+        List<Booking> adminSched = crobs.schedule(room.getId(), date);
+        assertEquals(2, adminSched.size());
+        assertEquals("u1", adminSched.get(0).getUserId());
+        assertEquals(u2.getId(), adminSched.get(1).getUserId());
+    }
+
     public static void main(String[] args) {
         CROBSTest suite = new CROBSTest();
         int passed = 0;

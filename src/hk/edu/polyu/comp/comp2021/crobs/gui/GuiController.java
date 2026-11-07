@@ -198,7 +198,7 @@ public class GuiController {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("User name cannot be blank");
         }
-        String sanitizedName = name.trim().replace(' ', '_');
+        String sanitizedName = name.trim();
         logger.logCommand("addUser " + sanitizedName);
         User user = model.addUser(sanitizedName);
         if (user != null) {
@@ -370,7 +370,7 @@ public class GuiController {
                         LocalTime endTime, String purpose) throws CrobsException {
         String cleanRoom = roomId.trim();
         String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim().replace(' ', '_') : "None";
+                ? purpose.trim() : "None";
         String cmd = String.format("book %s %s %s %s %s",
                 cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);
@@ -395,7 +395,7 @@ public class GuiController {
         String cleanId = bookingId.trim();
         String cleanRoom = roomId.trim();
         String cleanPurpose = (purpose != null && !purpose.trim().isEmpty())
-                ? purpose.trim().replace(' ', '_') : "None";
+                ? purpose.trim() : "None";
         String cmd = String.format("modifyBooking %s %s %s %s %s %s",
                 cleanId, cleanRoom, date, startTime.format(TIME_FMT), endTime.format(TIME_FMT), cleanPurpose);
         logger.logCommand(cmd);
@@ -522,7 +522,7 @@ public class GuiController {
     }
 
     public User addUserQuiet(String name) throws CrobsException {
-        User u = model.addUser(name.trim().replace(" ", "_"));
+        User u = model.addUser(name.trim());
         knownUsers.put(u.getId().toLowerCase(), u);
         notifyListeners();
         return u;
@@ -534,7 +534,7 @@ public class GuiController {
     }
 
     public Booking bookQuiet(String roomId, LocalDate date, LocalTime start, LocalTime end, String purpose) throws CrobsException {
-        String cleanP = (purpose == null || purpose.trim().isEmpty()) ? "-" : purpose.trim().replace(" ", "_");
+        String cleanP = (purpose == null || purpose.trim().isEmpty()) ? "-" : purpose.trim();
         Booking b = model.book(roomId.trim(), date, start, end, cleanP);
         notifyListeners();
         return b;
@@ -586,5 +586,13 @@ public class GuiController {
      */
     public boolean canRedo() {
         return model.canRedo();
+    }
+
+    /**
+     * Clears the command history for undo and redo.
+     */
+    public void clearUndoHistory() {
+        model.clearUndoHistory();
+        notifyListeners();
     }
 }

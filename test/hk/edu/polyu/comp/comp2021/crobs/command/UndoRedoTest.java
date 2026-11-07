@@ -485,4 +485,22 @@ public class UndoRedoTest {
         assertEquals(0, crobs.getUndoHistorySize());
         assertTrue(crobs.canRedo());
     }
+
+    @Test
+    void testModifyRoomRoomTypeAliasUndoRedo() throws Exception {
+        crobs.login("u1");
+        Room room = crobs.addRoom(RoomType.seminarRoom, 20, Collections.emptySet());
+
+        // Modify via alias
+        crobs.modifyRoom(room.getId(), "roomType", "meetingRoom");
+        assertEquals(RoomType.meetingRoom, crobs.listRoom(room.getId()).getType());
+
+        // Undo
+        assertTrue(crobs.undo());
+        assertEquals(RoomType.seminarRoom, crobs.listRoom(room.getId()).getType());
+
+        // Redo
+        assertTrue(crobs.redo());
+        assertEquals(RoomType.meetingRoom, crobs.listRoom(room.getId()).getType());
+    }
 }

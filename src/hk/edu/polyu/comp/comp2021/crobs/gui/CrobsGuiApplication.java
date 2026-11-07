@@ -24,17 +24,21 @@ public class CrobsGuiApplication {
     public static void main(String[] args) {
         String htmlLog = null;
         String txtLog = null;
+        boolean demoMode = false;
 
         for (int i = 0; i < args.length; i++) {
             if ("-html".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
                 htmlLog = args[++i];
             } else if ("-txt".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
                 txtLog = args[++i];
+            } else if ("--demo".equalsIgnoreCase(args[i])) {
+                demoMode = true;
             }
         }
 
         final String finalHtmlLog = htmlLog;
         final String finalTxtLog = txtLog;
+        final boolean finalDemoMode = demoMode;
 
         SwingUtilities.invokeLater(() -> {
             try {
@@ -46,8 +50,9 @@ public class CrobsGuiApplication {
             GuiSessionLogger logger = new GuiSessionLogger(finalHtmlLog, finalTxtLog);
             GuiController controller = new GuiController(model, logger);
 
-            // Auto-login as SuperAdmin u1 and initialize prototype campus rooms if empty
-            initDefaultState(controller);
+            if (finalDemoMode) {
+                initDefaultState(controller);
+            }
 
             MainFrame frame = new MainFrame(controller);
             frame.setVisible(true);
@@ -89,8 +94,10 @@ public class CrobsGuiApplication {
                 controller.loginQuiet("u1");
                 controller.bookQuiet("r3", dNov5, LocalTime.of(11, 0), LocalTime.of(12, 30), "Demonstration");
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            System.err.println("Warning: Demo data initialization encountered error: " + ex.getMessage());
         } finally {
+            controller.clearUndoHistory();
             // Guarantee unauthenticated initial state on startup so app begins on Login screen
             controller.logoutQuiet();
         }

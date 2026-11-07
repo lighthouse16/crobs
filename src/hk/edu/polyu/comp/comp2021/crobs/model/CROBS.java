@@ -539,10 +539,9 @@ public class CROBS {
      * @param roomId        room ID to query.
      * @param weekStartDate the start date of the 7-day period.
      * @return sorted list of active bookings in the 7-day range.
-     * @throws CrobsException if room not found or not logged in.
+     * @throws CrobsException if room not found.
      */
     public List<Booking> schedule(String roomId, LocalDate weekStartDate) throws CrobsException {
-        checkLoggedIn();
         Room room = getRoomOrThrow(roomId);
         if (weekStartDate == null) {
             throw new IllegalArgumentException("Week start date cannot be null");
@@ -617,6 +616,13 @@ public class CROBS {
         return undoRedoManager.getUndoCount();
     }
 
+    /**
+     * Clears the command history for undo and redo.
+     */
+    public void clearUndoHistory() {
+        undoRedoManager.clear();
+    }
+
     // ==========================================
     // Internal Helper Checks
     // ==========================================
@@ -662,7 +668,7 @@ public class CROBS {
     }
 
     private static String captureRoomFieldValue(Room room, String field) throws CrobsException {
-        if ("type".equalsIgnoreCase(field)) {
+        if ("type".equalsIgnoreCase(field) || "roomType".equalsIgnoreCase(field)) {
             return room.getType().name();
         }
         if ("capacity".equalsIgnoreCase(field)) {
@@ -675,7 +681,7 @@ public class CROBS {
     }
 
     private static String applyRoomModification(Room room, String field, String value) throws CrobsException {
-        if ("type".equalsIgnoreCase(field)) {
+        if ("type".equalsIgnoreCase(field) || "roomType".equalsIgnoreCase(field)) {
             RoomType newType = RoomType.fromString(value);
             if (newType == null) {
                 throw new CrobsException("Invalid room type: " + value);

@@ -176,7 +176,7 @@ public class CrobsGuiTest {
         Booking booking = controller.book(roomId, date, start, end, "Unit Test Session");
         assertNotNull(booking);
         assertEquals(roomId, booking.getRoomId());
-        assertEquals("Unit_Test_Session", booking.getPurpose());
+        assertEquals("Unit Test Session", booking.getPurpose());
 
         List<Booking> myBookings = controller.userListBookings();
         assertTrue(myBookings.stream().anyMatch(b -> b.getId().equals(booking.getId())));
@@ -185,7 +185,7 @@ public class CrobsGuiTest {
         LocalTime newEnd = LocalTime.of(12, 30);
         controller.modifyBooking(booking.getId(), roomId, date, start, newEnd, "Extended Session");
         assertEquals(newEnd, controller.getBookingsQuiet().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getEndTime());
-        assertEquals("Extended_Session", controller.getBookingsQuiet().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getPurpose());
+        assertEquals("Extended Session", controller.getBookingsQuiet().stream().filter(b -> b.getId().equals(booking.getId())).findFirst().get().getPurpose());
 
         // Test cancel booking
         controller.deleteBooking(booking.getId());
@@ -207,7 +207,7 @@ public class CrobsGuiTest {
         List<Booking> adminView = controller.schedule(roomId, date);
         assertFalse(adminView.isEmpty());
         Booking adminB = adminView.get(0);
-        assertEquals("Private_Superadmin_Meeting", adminB.getPurpose());
+        assertEquals("Private Superadmin Meeting", adminB.getPurpose());
 
         // Student Dave views schedule -> can query schedule through controller
         controller.login(student.getId());
@@ -216,7 +216,7 @@ public class CrobsGuiTest {
         Booking studentB = studentView.get(0);
         assertEquals(booking.getId(), studentB.getId());
         assertEquals("(hidden)", studentB.getUserId());
-        assertEquals("Private_Superadmin_Meeting", studentB.getPurpose());
+        assertEquals("Private Superadmin Meeting", studentB.getPurpose());
         assertFalse(controller.isAdmin());
     }
 
@@ -358,5 +358,39 @@ public class CrobsGuiTest {
         assertFalse(controller.canRedo());
 
         mainFrame.dispose();
+    }
+
+    @Test
+    void testGuiMultiwordPreservationAndCliReplay() throws Exception {
+        controller.login("u1");
+        User user = controller.addUser("Dr. Alexander Lam");
+        assertEquals("Dr. Alexander Lam", user.getName());
+        assertEquals("Dr. Alexander Lam", controller.getAllKnownUsers().stream()
+                .filter(u -> u.getId().equals(user.getId())).findFirst().get().getName());
+
+        Room room = controller.addRoom(RoomType.meetingRoom, 10, Collections.emptySet());
+        LocalDate date = LocalDate.now().plusDays(2);
+        Booking booking = controller.book(room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 0), "Weekly project meeting");
+        assertEquals("Weekly project meeting", booking.getPurpose());
+
+        controller.modifyBooking(booking.getId(), room.getId(), date, LocalTime.of(10, 0), LocalTime.of(11, 30), "Extended project meeting");
+        assertEquals("Extended project meeting", controller.getBookingsQuiet().stream()
+                .filter(b -> b.getId().equals(booking.getId())).findFirst().get().getPurpose());
+    }
+
+    @Test
+    void testCleanGuiStartupMatchesSpecification() {
+        CROBS freshModel = new CROBS();
+        GuiSessionLogger freshLogger = new GuiSessionLogger(null, null);
+        GuiController freshController = new GuiController(freshModel, freshLogger);
+
+        // Verification of spec initial state:
+        assertFalse(freshController.isLoggedIn());
+        assertNull(freshController.getCurrentUser());
+        assertEquals(0, freshController.getAllRoomsQuiet().size());
+        assertEquals(0, freshController.getBookingsQuiet().size());
+        assertEquals(0, freshModel.getUndoHistorySize());
+        assertEquals(1, freshController.getAllKnownUsers().size());
+        assertEquals("u1", freshController.getAllKnownUsers().get(0).getId());
     }
 }

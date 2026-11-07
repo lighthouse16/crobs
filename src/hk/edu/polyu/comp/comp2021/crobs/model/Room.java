@@ -112,14 +112,16 @@ public class Room {
      * @param newFeatures set of new features.
      */
     public void setFeatures(Set<String> newFeatures) {
-        features.clear();
+        Set<String> sanitized = new HashSet<>();
         if (newFeatures != null) {
             for (String f : newFeatures) {
                 if (f != null && !f.trim().isEmpty()) {
-                    features.add(f.trim());
+                    sanitized.add(f.trim());
                 }
             }
         }
+        features.clear();
+        features.addAll(sanitized);
     }
 
     /**
